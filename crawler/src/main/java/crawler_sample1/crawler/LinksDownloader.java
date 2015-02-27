@@ -2,7 +2,10 @@ package crawler_sample1.crawler;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -13,8 +16,8 @@ public class LinksDownloader implements Runnable {
 	LinksExtractor two;
 	ExecutorService exec;
 	File index_file;
-	ArrayList<String> newDownloadableLinks;
-	ArrayList<Future<MailObject>> runningDownloadLinks = new ArrayList<>();
+	CopyOnWriteArrayList<String> newDownloadableLinks;
+	CopyOnWriteArraySet<Future<MailObject>> runningDownloadLinks = new CopyOnWriteArraySet<>();
 
 	public LinksDownloader(LinksExtractor two) {
 
@@ -30,7 +33,7 @@ public class LinksDownloader implements Runnable {
 
 			while (!condition) {
 
-				Thread.sleep(1000);
+				Thread.sleep(3000);
 
 				if (LinksExtractor.downloadableLinks != null)
 
@@ -41,10 +44,12 @@ public class LinksDownloader implements Runnable {
 						if (newDownloadableLinks != null) {
 
 							if (runningDownloadLinks.size() > 0	&& !newDownloadableLinks.isEmpty()) {
-
-								for (int i = 0; i < runningDownloadLinks.size(); i++) {
-
-									Future<MailObject> f = runningDownloadLinks.get(i);
+								
+								Iterator<Future<MailObject>> itr = runningDownloadLinks.iterator();
+								
+								while(itr.hasNext()){
+									
+									Future<MailObject> f = itr.next();
 
 									MailObject obj = f.get(5, TimeUnit.SECONDS);
 
@@ -56,17 +61,19 @@ public class LinksDownloader implements Runnable {
 
 									else
 
-										runningDownloadLinks.remove(obj);
+										runningDownloadLinks.remove(f);
 
 									runDownloads();
-								}
+								}								
 							}
 
 							else if (runningDownloadLinks.size() > 0 && newDownloadableLinks.isEmpty()) {
+								
+								Iterator<Future<MailObject>> itr  = runningDownloadLinks.iterator();
 
-								for (int i = 0; i < runningDownloadLinks.size(); i++) {
+								while(itr.hasNext()){
 
-									Future<MailObject> f = runningDownloadLinks.get(i);
+									Future<MailObject> f = itr.next();
 
 									MailObject obj = f.get(5, TimeUnit.SECONDS);
 
@@ -125,6 +132,7 @@ public class LinksDownloader implements Runnable {
 		List<Future<MailObject>> futs = new ArrayList<>();
 
 		try {
+			
 			for (int i = 0; i < newDownloadableLinks.size(); i++)
 				futs.add(i, exec.submit(new LinkDownloadThread(newDownloadableLinks.get(i))));
 
@@ -133,7 +141,7 @@ public class LinksDownloader implements Runnable {
 				Future<MailObject> f = futs.get(i);
 				MailObject ob = f.get(5, TimeUnit.SECONDS);
 
-				System.out.println(ob.contents);
+				System.out.println(ob.from);
 
 				if (!(ob.from.equalsIgnoreCase("Exception")))
 					newDownloadableLinks.remove(ob.mailId);

@@ -7,7 +7,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLConnection;
-import java.util.ArrayList;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -30,7 +30,7 @@ public class LinksExtractor implements Runnable {
 
 	boolean parsingStatus = true;
 
-	static ArrayList<String> downloadableLinks;
+	static CopyOnWriteArrayList<String> downloadableLinks;
 
 	private LinksExtractor() {
 
@@ -46,13 +46,13 @@ public class LinksExtractor implements Runnable {
 	}
 
 	public synchronized void updateDownloadLinks(
-			ArrayList<String> newDownloadableLinks) {
+			CopyOnWriteArrayList<String> newDownloadableLinks) {
 
 		downloadableLinks.clear();
 		downloadableLinks = newDownloadableLinks;
 	}
 
-	public synchronized ArrayList<String> getDownloadLinks() {
+	public synchronized CopyOnWriteArrayList<String> getDownloadLinks() {
 		return downloadableLinks;
 
 	}
@@ -60,9 +60,7 @@ public class LinksExtractor implements Runnable {
 	@Override
 	public void run() {
 
-		// initialize();
-
-		downloadableLinks = new ArrayList<>();
+		downloadableLinks = new CopyOnWriteArrayList<String>();
 
 		Thread t1 = new Thread(new LinksDownloader(this));
 		t1.start();
