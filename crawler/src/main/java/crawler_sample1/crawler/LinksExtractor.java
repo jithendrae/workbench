@@ -109,9 +109,7 @@ public class LinksExtractor implements Runnable {
 
 						if (i % 10 == 0 && i > 0)
 							downloadableLinks.wait();
-
 					}
-
 			}
 
 			parsingStatus = false;
