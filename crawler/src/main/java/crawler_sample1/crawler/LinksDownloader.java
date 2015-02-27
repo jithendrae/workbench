@@ -2,10 +2,9 @@ package crawler_sample1.crawler;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -16,8 +15,8 @@ public class LinksDownloader implements Runnable {
 	LinksExtractor two;
 	ExecutorService exec;
 	File index_file;
-	CopyOnWriteArrayList<String> newDownloadableLinks;
-	CopyOnWriteArraySet<Future<MailObject>> runningDownloadLinks = new CopyOnWriteArraySet<>();
+	ArrayList<String> newDownloadableLinks;
+	ArrayList<Future<MailObject>> runningDownloadLinks = new ArrayList<>();
 
 	public LinksDownloader(LinksExtractor two) {
 
@@ -26,14 +25,14 @@ public class LinksDownloader implements Runnable {
 	}
 
 	public void run() {
-
+		
 		boolean condition = false, setDownloadableLinksStatus = true;
 
 		try {
+			
+			Thread.sleep(1000);
 
 			while (!condition) {
-
-				Thread.sleep(3000);
 
 				if (LinksExtractor.downloadableLinks != null)
 
@@ -42,6 +41,9 @@ public class LinksDownloader implements Runnable {
 						newDownloadableLinks = two.getDownloadLinks();
 
 						if (newDownloadableLinks != null) {
+							
+							Collections.synchronizedList(newDownloadableLinks);
+							Collections.synchronizedCollection(runningDownloadLinks);
 
 							if (runningDownloadLinks.size() > 0	&& !newDownloadableLinks.isEmpty()) {
 								
@@ -56,15 +58,15 @@ public class LinksDownloader implements Runnable {
 									if (!(obj.from.equalsIgnoreCase("Exception"))) {
 
 										newDownloadableLinks.remove(obj.mailId);
-										runningDownloadLinks.remove(f);
+										itr.remove();
 									}
 
 									else
 
-										runningDownloadLinks.remove(f);
-
-									runDownloads();
-								}								
+										itr.remove();
+								}
+								
+								runDownloads();
 							}
 
 							else if (runningDownloadLinks.size() > 0 && newDownloadableLinks.isEmpty()) {
@@ -79,11 +81,11 @@ public class LinksDownloader implements Runnable {
 
 									if (!(obj.from.equalsIgnoreCase("Exception"))) {
 
-										runningDownloadLinks.remove(f);
+										itr.remove();
 									}
 
 									else {
-										runningDownloadLinks.remove(f);
+										itr.remove();
 										newDownloadableLinks.add(obj.mailId);
 									}
 
@@ -122,7 +124,7 @@ public class LinksDownloader implements Runnable {
 		catch (Exception e) {
 			e.printStackTrace();
 		}
-
+		
 	}
 
 	private synchronized void runDownloads() {

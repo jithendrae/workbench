@@ -7,7 +7,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLConnection;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -24,13 +24,13 @@ public class LinksExtractor implements Runnable {
 
 	static LinksExtractor instance;
 
-	String url = "http://mail-archives.apache.org/mod_mbox/httpd-announce/?format=sitemap";
+	String url = "http://mail-archives.apache.org/mod_mbox/maven-users/?format=sitemap";
 	String year = "2014";
 	File f = new File("sample.xml");
 
 	boolean parsingStatus = true;
 
-	static CopyOnWriteArrayList<String> downloadableLinks;
+	static ArrayList<String> downloadableLinks;
 
 	private LinksExtractor() {
 
@@ -46,13 +46,13 @@ public class LinksExtractor implements Runnable {
 	}
 
 	public synchronized void updateDownloadLinks(
-			CopyOnWriteArrayList<String> newDownloadableLinks) {
+			ArrayList<String> newDownloadableLinks) {
 
 		downloadableLinks.clear();
 		downloadableLinks = newDownloadableLinks;
 	}
 
-	public synchronized CopyOnWriteArrayList<String> getDownloadLinks() {
+	public synchronized ArrayList<String> getDownloadLinks() {
 		return downloadableLinks;
 
 	}
@@ -60,7 +60,7 @@ public class LinksExtractor implements Runnable {
 	@Override
 	public void run() {
 
-		downloadableLinks = new CopyOnWriteArrayList<String>();
+		downloadableLinks = new ArrayList<String>();
 
 		Thread t1 = new Thread(new LinksDownloader(this));
 		t1.start();
@@ -69,17 +69,17 @@ public class LinksExtractor implements Runnable {
 		try {
 			URLConnection ucon = new URL(url).openConnection();
 
-			BufferedReader br = new BufferedReader(new InputStreamReader(ucon.getInputStream()));
+			BufferedReader br = new BufferedReader(new InputStreamReader(ucon.getInputStream()), 500 * 1024);
 			String input = "";
 
 			FileWriter fw = new FileWriter(f);
-
+			
 			while ((input = br.readLine()) != null)
 
-				fw.write(input);
+				fw.write(input);			
 
 			fw.close();
-
+								
 			builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
 			Document doc = builder.parse(f);
 

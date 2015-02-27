@@ -10,7 +10,9 @@ public class StartApp {
 		System.out.println("Downloading Apache mail archieve: http://mail-archives.apache.org/mod_mbox/httpd-announce/ for the year : 2014");
 
 		LinksExtractor obj = LinksExtractor.getInstance();
+					
 		new Thread(obj).start();
+				
 	}
 
 }

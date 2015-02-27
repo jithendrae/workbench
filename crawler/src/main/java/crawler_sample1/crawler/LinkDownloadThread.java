@@ -28,7 +28,7 @@ public class LinkDownloadThread implements Callable<MailObject> {
 	@SuppressWarnings("deprecation")
 	@Override
 	public MailObject call() throws Exception {
-
+		
 		MailObject obj = null;
 
 		System.out.println(mailbox_url);
@@ -68,10 +68,13 @@ public class LinkDownloadThread implements Callable<MailObject> {
 				FileUtils.writeStringToFile(f, obj.contents, "UTF-8");
 			}
 
-		} catch (Exception e) {
+		} 
+		
+		catch (Exception e) 
+		{
 			return new MailObject("Exception", null, e.getMessage(), mailbox_url, null);
 		}
-
+			
 		return obj;
 
 	}
