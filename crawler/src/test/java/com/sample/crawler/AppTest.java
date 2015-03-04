@@ -1,4 +1,4 @@
-package crawler_sample1.crawler;
+package com.sample.crawler;
 
 import junit.framework.Test;
 import junit.framework.TestCase;

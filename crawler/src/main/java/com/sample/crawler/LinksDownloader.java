@@ -1,6 +1,5 @@
-package crawler_sample1.crawler;
+package com.sample.crawler;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -10,18 +9,23 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class LinksDownloader implements Runnable {
 
-	LinksExtractor two;
-	ExecutorService exec;
-	File index_file;
-	ArrayList<String> newDownloadableLinks;
-	ArrayList<Future<MailObject>> runningDownloadLinks = new ArrayList<>();
+	private LinksExtractor linksExtractorRef;
+	private ExecutorService exec;
+	private ArrayList<String> newDownloadableLinks;
+	private ArrayList<Future<MailObject>> runningDownloadLinks = new ArrayList<>();
+	
+	static final Logger LOG = LoggerFactory.getLogger(LinksDownloader.class);
 
-	public LinksDownloader(LinksExtractor two) {
 
-		this.two = two;
-		exec = Executors.newFixedThreadPool(6);
+	public LinksDownloader(LinksExtractor obj) {
+
+		this.linksExtractorRef = obj;
+		exec = Executors.newFixedThreadPool(110);
 	}
 
 	public void run() {
@@ -29,6 +33,8 @@ public class LinksDownloader implements Runnable {
 		boolean condition = false, setDownloadableLinksStatus = true;
 
 		try {
+			
+			LOG.info("Adding links to download corresponding mails");
 			
 			Thread.sleep(1000);
 
@@ -38,7 +44,7 @@ public class LinksDownloader implements Runnable {
 
 					synchronized (LinksExtractor.downloadableLinks) {
 
-						newDownloadableLinks = two.getDownloadLinks();
+						newDownloadableLinks = linksExtractorRef.getDownloadLinks();
 
 						if (newDownloadableLinks != null) {
 							
@@ -53,7 +59,7 @@ public class LinksDownloader implements Runnable {
 									
 									Future<MailObject> f = itr.next();
 
-									MailObject obj = f.get(5, TimeUnit.SECONDS);
+									MailObject obj = f.get(10, TimeUnit.SECONDS);
 
 									if (!(obj.from.equalsIgnoreCase("Exception"))) {
 
@@ -77,7 +83,7 @@ public class LinksDownloader implements Runnable {
 
 									Future<MailObject> f = itr.next();
 
-									MailObject obj = f.get(5, TimeUnit.SECONDS);
+									MailObject obj = f.get(10, TimeUnit.SECONDS);
 
 									if (!(obj.from.equalsIgnoreCase("Exception"))) {
 
@@ -102,9 +108,9 @@ public class LinksDownloader implements Runnable {
 
 						}
 
-						two.updateDownloadLinks(newDownloadableLinks);
+						linksExtractorRef.updateDownloadLinks(newDownloadableLinks);
 
-						if (two.getLinksRemainingStatus() == false)
+						if (linksExtractorRef.getLinksRemainingStatus() == false)
 							setDownloadableLinksStatus = false;
 
 						if (setDownloadableLinksStatus == false
@@ -112,7 +118,7 @@ public class LinksDownloader implements Runnable {
 								&& newDownloadableLinks.size() < 1) {
 							condition = true;
 							exec.shutdown();
-							exec.awaitTermination(6, TimeUnit.SECONDS);
+							exec.awaitTermination(10, TimeUnit.SECONDS);
 						}
 
 						LinksExtractor.downloadableLinks.notify();
@@ -123,44 +129,44 @@ public class LinksDownloader implements Runnable {
 
 		catch (Exception e) {
 			e.printStackTrace();
+			//log severe
 		}
 		
 	}
 
 	private synchronized void runDownloads() {
 
-		writeLinksToDisk();
-
 		List<Future<MailObject>> futs = new ArrayList<>();
 
 		try {
 			
-			for (int i = 0; i < newDownloadableLinks.size(); i++)
-				futs.add(i, exec.submit(new LinkDownloadThread(newDownloadableLinks.get(i))));
+			for (int i = 0; i < newDownloadableLinks.size(); i++){
+				
+				String link = newDownloadableLinks.get(i);
+				
+				futs.add(i, exec.submit(new LinkDownloadThread(link)));
+				LOG.info("Link: " + link);
+			}
 
 			for (int i = 0; i < futs.size(); i++) {
 
 				Future<MailObject> f = futs.get(i);
 				MailObject ob = f.get(5, TimeUnit.SECONDS);
 
-				System.out.println(ob.from);
-
 				if (!(ob.from.equalsIgnoreCase("Exception")))
 					newDownloadableLinks.remove(ob.mailId);
 
-				else
+				else{
 					runningDownloadLinks.add(f);
-
+					LOG.info("Mail download not complete for link: " + f.get().mailId);
+				}
+					
 			}
 		}
 
 		catch (Exception e) {
-			e.printStackTrace();
+			LOG.warn(e.toString());
 		}
-	}
-
-	private synchronized void writeLinksToDisk() {
-
 	}
 
 }

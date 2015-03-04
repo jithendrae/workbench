@@ -1,4 +1,4 @@
-package crawler_sample1.crawler;
+package com.sample.crawler;
 
 import java.io.File;
 import java.text.ParseException;
@@ -14,11 +14,14 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class LinkDownloadThread implements Callable<MailObject> {
 
-	String mailid;
-	String mailbox_url;
+	private String mailbox_url;
+	static final Logger LOG = LoggerFactory.getLogger(LinkDownloadThread.class);
+
 
 	public LinkDownloadThread(String url) {
 
@@ -29,15 +32,13 @@ public class LinkDownloadThread implements Callable<MailObject> {
 	@Override
 	public MailObject call() throws Exception {
 		
+		LOG.debug("Starting to save mail content for mail " + mailbox_url);
+		
 		MailObject obj = null;
-
-		System.out.println(mailbox_url);
 
 		int decode_index = mailbox_url.lastIndexOf("/");
 		String url_first = mailbox_url.substring(0, decode_index + 1);
 		String url_last = "<" + mailbox_url.substring(decode_index + 4,	mailbox_url.length() - 3) + ">";
-		mailid = url_last;
-
 		try {
 
 			String url = url_first + url_last;
@@ -57,7 +58,7 @@ public class LinkDownloadThread implements Callable<MailObject> {
 				fileName = fileName.replaceAll("[():\\\\/*\"?|<>]+", "_");
 
 				fileName = StringUtils.trim(fileName);
-
+								
 				File f = new File("E://mails//"
 						+ new SimpleDateFormat("yyyy").format(obj.date) + "//"
 						+ theMonth(obj.date.getMonth()) + "//" + fileName
@@ -94,7 +95,7 @@ public class LinkDownloadThread implements Callable<MailObject> {
 
 	private MailObject buildMailObject(Elements rowData) {
 
-		Date date;
+		Date date = null;
 		String from = null;
 		String subject = null;
 		String contents = null;
@@ -124,17 +125,18 @@ public class LinkDownloadThread implements Callable<MailObject> {
 			}
 		}
 
-		Date parsedDate = null;
-		SimpleDateFormat inputFormat = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss Z");
-
-		try {
-			parsedDate = inputFormat.parse(dateString);
-		} catch (ParseException e) {
-			e.printStackTrace();
+		SimpleDateFormat inputFormat = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss");
+		
+		try 
+		{
+			date = inputFormat.parse(dateString);
+		}
+		catch (ParseException e) 
+		{
+			LOG.warn(e.getMessage());
 
 		}
-		date = parsedDate;
-
+		
 		if (from != null && from.length() > 2)
 
 			return new MailObject(from, subject, contents, mailbox_url, date);
