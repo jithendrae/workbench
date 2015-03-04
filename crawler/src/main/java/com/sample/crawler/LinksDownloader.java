@@ -67,9 +67,13 @@ public class LinksDownloader implements Runnable {
 										itr.remove();
 									}
 
-									else
-
+									else{
+										
+										LOG.debug("Corresponding mail " + obj.mailId + " download failed with exception" + obj.from);
+										
 										itr.remove();
+									}
+										
 								}
 								
 								runDownloads();
@@ -84,6 +88,7 @@ public class LinksDownloader implements Runnable {
 									Future<MailObject> f = itr.next();
 
 									MailObject obj = f.get(10, TimeUnit.SECONDS);
+									
 
 									if (!(obj.from.equalsIgnoreCase("Exception"))) {
 
@@ -91,6 +96,9 @@ public class LinksDownloader implements Runnable {
 									}
 
 									else {
+										
+										LOG.debug("Corresponding mail " + obj.mailId + " download failed with exception" + obj.from);
+										
 										itr.remove();
 										newDownloadableLinks.add(obj.mailId);
 									}
@@ -116,9 +124,14 @@ public class LinksDownloader implements Runnable {
 						if (setDownloadableLinksStatus == false
 								&& runningDownloadLinks.size() < 1
 								&& newDownloadableLinks.size() < 1) {
+							
 							condition = true;
+							
 							exec.shutdown();
-							exec.awaitTermination(10, TimeUnit.SECONDS);
+							
+							LOG.info("Application finishing...");
+							
+							exec.awaitTermination(10, TimeUnit.SECONDS);							
 						}
 
 						LinksExtractor.downloadableLinks.notify();
@@ -128,8 +141,7 @@ public class LinksDownloader implements Runnable {
 		}
 
 		catch (Exception e) {
-			e.printStackTrace();
-			//log severe
+			LOG.error("Downloads not started with following error \n" + e.getMessage());
 		}
 		
 	}
