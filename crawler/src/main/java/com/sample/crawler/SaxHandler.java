@@ -22,17 +22,15 @@ public class SaxHandler extends DefaultHandler{
 	public void startElement(String uri, String localName,String qName, Attributes attributes) throws SAXException{
 		
 		if(qName.equalsIgnoreCase("loc"))
-			isLocTag = true;
-			
+			isLocTag = true;			
 	}
 	
 	public void characters(char ch[], int start, int length) throws SAXException {
 		
 		if(isLocTag){
 			
-			Pattern p = Pattern.compile("(.)*/" + yearToExtract + "[0-9]{2}.mbox/(.)*");
-			
-			String str = new String(ch, start, length).trim();
+			String str = new String(ch, start, length).trim();			
+			Pattern p = Pattern.compile("(.)*/" + yearToExtract + "[0-9]{2}.mbox/(.)*");			
 			
 			if(str!=null && !str.isEmpty() && !str.equalsIgnoreCase(""))			
 				

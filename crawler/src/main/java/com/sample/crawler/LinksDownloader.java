@@ -21,24 +21,21 @@ public class LinksDownloader implements Runnable {
 	
 	static final Logger LOG = LoggerFactory.getLogger(LinksDownloader.class);
 
-
 	public LinksDownloader(LinksExtractor obj) {
 
 		this.linksExtractorRef = obj;
-		exec = Executors.newFixedThreadPool(110);
+		exec = Executors.newCachedThreadPool();
 	}
 
 	public void run() {
 		
-		boolean condition = false, setDownloadableLinksStatus = true;
+		boolean threadExitCondition = false, setDownloadableLinksStatus = true;
 
 		try {
 			
 			LOG.info("Adding links to download corresponding mails");
 			
-			Thread.sleep(1000);
-
-			while (!condition) {
+			while (!threadExitCondition) {
 
 				if (LinksExtractor.downloadableLinks != null)
 
@@ -125,7 +122,7 @@ public class LinksDownloader implements Runnable {
 								&& runningDownloadLinks.size() < 1
 								&& newDownloadableLinks.size() < 1) {
 							
-							condition = true;
+							threadExitCondition = true;
 							
 							exec.shutdown();
 							

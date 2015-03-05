@@ -22,7 +22,6 @@ public class LinkDownloadThread implements Callable<MailObject> {
 	private String mailbox_url;
 	static final Logger LOG = LoggerFactory.getLogger(LinkDownloadThread.class);
 
-
 	public LinkDownloadThread(String url) {
 
 		mailbox_url = url;
@@ -44,7 +43,6 @@ public class LinkDownloadThread implements Callable<MailObject> {
 			String url = url_first + url_last;
 
 			Document doc = Jsoup.connect(url).get();
-
 			Elements ele = doc.getElementsByTag("table");
 
 			for (Element l : ele) {
