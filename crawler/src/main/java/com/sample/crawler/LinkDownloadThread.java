@@ -17,6 +17,10 @@ import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/*
+ * This class downloads and saves the mail from the url that is supplied to it
+ */
+
 public class LinkDownloadThread implements Callable<MailObject> {
 
 	private String mailbox_url;
@@ -27,7 +31,31 @@ public class LinkDownloadThread implements Callable<MailObject> {
 		mailbox_url = url;
 	}
 
+	public String getUrl(String mailbox_url){
+		
+		int decode_index = mailbox_url.lastIndexOf("/");
+		String url_first = mailbox_url.substring(0, decode_index + 1);
+		String url_last = "<" + mailbox_url.substring(decode_index + 4,	mailbox_url.length() - 3) + ">";
+		return  url_first + url_last;
+	}
+	
 	@SuppressWarnings("deprecation")
+	public String getSaveFileName(MailObject obj){
+		
+		String fileName = obj.subject.replaceAll("[^a-zA-Z0-9.-_][.]$", "");		
+		fileName = fileName.replaceAll("[():\\\\/*\"?|<>]+", "_");
+		fileName = StringUtils.trim(fileName);
+		
+		String filePath = "E://mails//"
+				+ new SimpleDateFormat("yyyy").format(obj.date) + "//"
+				+ theMonth(obj.date.getMonth()) + "//" + fileName
+				+ "__"
+				+ new SimpleDateFormat("dd_HHmm").format(obj.date)
+				+ ".txt";
+		
+		return filePath;
+	}
+	
 	@Override
 	public MailObject call() throws Exception {
 		
@@ -35,12 +63,9 @@ public class LinkDownloadThread implements Callable<MailObject> {
 		
 		MailObject obj = null;
 
-		int decode_index = mailbox_url.lastIndexOf("/");
-		String url_first = mailbox_url.substring(0, decode_index + 1);
-		String url_last = "<" + mailbox_url.substring(decode_index + 4,	mailbox_url.length() - 3) + ">";
 		try {
 
-			String url = url_first + url_last;
+			String url = getUrl(mailbox_url);
 
 			Document doc = Jsoup.connect(url).get();
 			Elements ele = doc.getElementsByTag("table");
@@ -52,19 +77,8 @@ public class LinkDownloadThread implements Callable<MailObject> {
 
 			if (obj != null) {
 
-				String fileName = obj.subject.replaceAll("[^a-zA-Z0-9.-_][.]$", "");
-				fileName = fileName.replaceAll("[():\\\\/*\"?|<>]+", "_");
-
-				fileName = StringUtils.trim(fileName);
-								
-				File f = new File("E://mails//"
-						+ new SimpleDateFormat("yyyy").format(obj.date) + "//"
-						+ theMonth(obj.date.getMonth()) + "//" + fileName
-						+ "__"
-						+ new SimpleDateFormat("dd_HHmm").format(obj.date)
-						+ ".txt");
-
-				FileUtils.writeStringToFile(f, obj.contents, "UTF-8");
+				String path = getSaveFileName(obj);
+				FileUtils.writeStringToFile(new File(path), obj.contents, "UTF-8");
 			}
 
 		} 

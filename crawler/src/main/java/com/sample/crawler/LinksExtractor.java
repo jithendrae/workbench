@@ -30,8 +30,7 @@ public class LinksExtractor extends Thread {
 		year = mail_year_to_download;
 	}
 
-	public synchronized void updateDownloadLinks(
-			ArrayList<String> newDownloadableLinks) {
+	public synchronized void updateDownloadLinks(ArrayList<String> newDownloadableLinks) {
 
 		downloadableLinks.clear();
 		downloadableLinks = newDownloadableLinks;
@@ -45,11 +44,10 @@ public class LinksExtractor extends Thread {
 	@Override
 	public void run() {
 		
-		//log start extracting links
 		LOG.info("Starting to download sitemap index for the provided mailbox");
 
 		downloadableLinks = new ArrayList<String>();
-
+		
 		try 
 		{
 			URLConnection ucon = new URL(url).openConnection();
