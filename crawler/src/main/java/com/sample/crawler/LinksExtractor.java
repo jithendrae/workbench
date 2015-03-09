@@ -74,6 +74,9 @@ public class LinksExtractor extends Thread {
 
 						if (i % 1000 == 0 && i != 0)
 							downloadableLinks.wait();
+						
+						else if(handler.extractedUrls.size() -i -1 == 0)
+							downloadableLinks.wait();
 					}
 			}
 			

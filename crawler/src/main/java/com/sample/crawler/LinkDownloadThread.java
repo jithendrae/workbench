@@ -58,9 +58,7 @@ public class LinkDownloadThread implements Callable<MailObject> {
 	
 	@Override
 	public MailObject call() throws Exception {
-		
-		LOG.debug("Starting to save mail content for mail " + mailbox_url);
-		
+				
 		MailObject obj = null;
 
 		try {
@@ -85,9 +83,12 @@ public class LinkDownloadThread implements Callable<MailObject> {
 		
 		catch (Exception e) 
 		{
+			LOG.debug("Exception saving mail for url " + mailbox_url);
 			return new MailObject("Exception", null, e.getMessage(), mailbox_url, null);
 		}
 			
+		LOG.debug("Finishing to save mail content for mail " + mailbox_url);
+
 		return obj;
 
 	}

@@ -48,8 +48,8 @@ public class SaxHandler extends DefaultHandler {
 		if (isLocTag) {
 
 			String str = new String(ch, start, length).trim();
-			Pattern p = Pattern.compile("(.)*/" + yearToExtract
-					+ "[0-9]{2}.mbox/(.)*");
+			Pattern p = Pattern.compile("/" + yearToExtract
+					+ "[0-9]{2}.mbox/");
 
 			if (str != null && !str.isEmpty() && !str.equalsIgnoreCase(""))
 

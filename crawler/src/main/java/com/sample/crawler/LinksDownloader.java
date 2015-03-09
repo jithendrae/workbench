@@ -48,30 +48,25 @@ public class LinksDownloader implements Runnable {
 
 					synchronized (LinksExtractor.downloadableLinks) {
 
-						newDownloadableLinks = linksExtractorRef
-								.getDownloadLinks();
+						newDownloadableLinks = linksExtractorRef.getDownloadLinks();
 
 						if (newDownloadableLinks != null) {
 
 							Collections.synchronizedList(newDownloadableLinks);
-							Collections
-									.synchronizedCollection(runningDownloadLinks);
+							Collections.synchronizedCollection(runningDownloadLinks);
 
 							if (runningDownloadLinks.size() > 0
 									&& !newDownloadableLinks.isEmpty()) {
 
-								Iterator<Future<MailObject>> itr = runningDownloadLinks
-										.iterator();
+								Iterator<Future<MailObject>> itr = runningDownloadLinks.iterator();
 
 								while (itr.hasNext()) {
 
 									Future<MailObject> f = itr.next();
 
-									MailObject obj = f.get(120,
-											TimeUnit.SECONDS);
+									MailObject obj = f.get(100,	TimeUnit.SECONDS);
 
-									if (!(obj.from
-											.equalsIgnoreCase("Exception"))) {
+									if (!(obj.from.equalsIgnoreCase("Exception"))) {
 
 										newDownloadableLinks.remove(obj.mailId);
 										itr.remove();
@@ -95,18 +90,15 @@ public class LinksDownloader implements Runnable {
 							else if (runningDownloadLinks.size() > 0
 									&& newDownloadableLinks.isEmpty()) {
 
-								Iterator<Future<MailObject>> itr = runningDownloadLinks
-										.iterator();
+								Iterator<Future<MailObject>> itr = runningDownloadLinks.iterator();
 
 								while (itr.hasNext()) {
 
 									Future<MailObject> f = itr.next();
 
-									MailObject obj = f.get(120,
-											TimeUnit.SECONDS);
+									MailObject obj = f.get(100, TimeUnit.SECONDS);
 
-									if (!(obj.from
-											.equalsIgnoreCase("Exception"))) {
+									if (!(obj.from.equalsIgnoreCase("Exception"))) {
 
 										itr.remove();
 									}
@@ -152,7 +144,7 @@ public class LinksDownloader implements Runnable {
 
 							LOG.info("Application finishing...");
 
-							exec.awaitTermination(150, TimeUnit.SECONDS);
+							exec.awaitTermination(300, TimeUnit.SECONDS);
 						}
 
 						LinksExtractor.downloadableLinks.notify();
@@ -191,7 +183,7 @@ public class LinksDownloader implements Runnable {
 			for (int i = 0; i < futs.size(); i++) {
 
 				Future<MailObject> f = futs.get(i);
-				MailObject ob = f.get(120, TimeUnit.SECONDS);
+				MailObject ob = f.get(100, TimeUnit.SECONDS);
 
 				if (!(ob.from.equalsIgnoreCase("Exception")))
 					newDownloadableLinks.remove(ob.mailId);
