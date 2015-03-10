@@ -59,78 +59,86 @@ public class LinksDownloader implements Runnable {
 									&& !newDownloadableLinks.isEmpty()) {
 
 								Iterator<Future<MailObject>> itr = runningDownloadLinks.iterator();
+								
+								Future<MailObject> f;
+
+								MailObject obj = null;
 
 								while (itr.hasNext()) {
 
-									Future<MailObject> f = itr.next();
-
-									MailObject obj = null;
+									f = itr.next();
 									
 									try{
-									obj = f.get(100, TimeUnit.SECONDS);
+										obj = f.get(200, TimeUnit.SECONDS);
+										
+										if (!(obj.from.equalsIgnoreCase("Exception")) && obj!=null) {
+	
+											newDownloadableLinks.remove(obj.mailId);
+											itr.remove();
+										}
+	
+										else {
+	
+											LOG.debug("Corresponding mail "
+													+ obj.mailId
+													+ " download failed with on"
+													+ obj.contents);
+	
+											itr.remove();
+										}									
 									}
 									catch(Exception e){
 										LOG.error(e.getLocalizedMessage());
-									}
-									if (!(obj.from.equalsIgnoreCase("Exception")) && obj!=null) {
-
-										newDownloadableLinks.remove(obj.mailId);
 										itr.remove();
 									}
-
-									else {
-
-										LOG.debug("Corresponding mail "
-												+ obj.mailId
-												+ " download failed with exception"
-												+ obj.from);
-
-										itr.remove();
-									}
-
 								}
 
 								runDownloads();
 							}
 
-							else if (runningDownloadLinks.size() > 0
+							/*else if (runningDownloadLinks.size() > 0
 									&& newDownloadableLinks.isEmpty()) {
 
 								Iterator<Future<MailObject>> itr = runningDownloadLinks.iterator();
+								
+								Future<MailObject> f;
+
+								MailObject obj = null;
 
 								while (itr.hasNext()) {
 
-									Future<MailObject> f = itr.next();
-
-									MailObject obj = null;
+									f = itr.next();
+									
 									try{
-									obj = f.get(100, TimeUnit.SECONDS);
+										obj = f.get(200, TimeUnit.SECONDS);
+										
+										if (!(obj.from.equalsIgnoreCase("Exception")) && obj!= null) {
+	
+											itr.remove();
+										}
+	
+										else {
+	
+											LOG.debug("Corresponding mail "
+													+ obj.mailId
+													+ " download failed with on"
+													+ obj.from);
+	
+											itr.remove();
+											newDownloadableLinks.add(obj.mailId);
+										}
 									}
 									catch(Exception e){
 										LOG.error(e.getLocalizedMessage());
-									}
-									
-									if (!(obj.from.equalsIgnoreCase("Exception")) && obj!= null) {
-
-										itr.remove();
-									}
-
-									else {
-
-										LOG.debug("Corresponding mail "
-												+ obj.mailId
-												+ " download failed with exception"
-												+ obj.from);
-
-										itr.remove();
-										newDownloadableLinks.add(obj.mailId);
-									}
+										//itr.remove();
+										//newDownloadableLinks.add(f)
+									}									
 
 								}
 
 								runDownloads();
 
-							}
+							}*/
 
 							else if (runningDownloadLinks.isEmpty()
 									&& !newDownloadableLinks.isEmpty()) {
@@ -140,8 +148,7 @@ public class LinksDownloader implements Runnable {
 
 						}
 
-						linksExtractorRef
-								.updateDownloadLinks(newDownloadableLinks);
+						linksExtractorRef.updateDownloadLinks(newDownloadableLinks);
 
 						if (linksExtractorRef.getLinksRemainingStatus() == false)
 							setDownloadableLinksStatus = false;
@@ -161,6 +168,7 @@ public class LinksDownloader implements Runnable {
 
 						LinksExtractor.downloadableLinks.notify();
 					}
+				
 			}
 
 		}
@@ -191,29 +199,31 @@ public class LinksDownloader implements Runnable {
 				futs.add(i, exec.submit(new LinkDownloadThread(link)));
 				LOG.info("Link: " + link);
 			}
-
-			for (int i = 0; i < futs.size(); i++) {
-
-				Future<MailObject> f = futs.get(i);
+			
+			Iterator<Future<MailObject>> itr = futs.iterator();
+			
+			while(itr.hasNext()){
+				
+				Future<MailObject> f = itr.next();
 				MailObject ob = null;
 				try{
-				ob = f.get(100, TimeUnit.SECONDS);
+					ob = f.get(100, TimeUnit.SECONDS);
+					if (!(ob.from.equalsIgnoreCase("Exception")))
+						newDownloadableLinks.remove(ob.mailId);
+	
+					else {
+						runningDownloadLinks.add(f);
+						LOG.info("Mail download not complete for link: "
+								+ ob.mailId);
+					}
 				}
 				catch(Exception e){
-					e.printStackTrace();
-					System.out.println(ob);
-				}
-
-				if (!(ob.from.equalsIgnoreCase("Exception")))
-					newDownloadableLinks.remove(ob.mailId);
-
-				else {
-					runningDownloadLinks.add(f);
-					LOG.info("Mail download not complete for link: "
-							+ f.get().mailId);
-				}
-
+					LOG.error(e.getMessage());
+					itr.remove();
+				}			
+				
 			}
+
 		}
 
 		catch (Exception e) {

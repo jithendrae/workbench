@@ -18,10 +18,12 @@ public class SaxHandler extends DefaultHandler {
 	boolean isLocTag = false;
 	public ArrayList<String> extractedUrls = new ArrayList<>();
 	private String yearToExtract;
+	private Pattern p;
 
 	public SaxHandler(String year) {
 
 		yearToExtract = year;
+		p = Pattern.compile("(.)*/" + yearToExtract	+ "[0-9]{2}.mbox/(.)*");
 	}
 
 	/*
@@ -35,6 +37,8 @@ public class SaxHandler extends DefaultHandler {
 
 		if (qName.equalsIgnoreCase("loc"))
 			isLocTag = true;
+		else
+			isLocTag = false;
 	}
 
 	/*
@@ -44,12 +48,10 @@ public class SaxHandler extends DefaultHandler {
 
 	public void characters(char ch[], int start, int length)
 			throws SAXException {
+		
+		String str = new String(ch, start, length).trim();
 
 		if (isLocTag) {
-
-			String str = new String(ch, start, length).trim();
-			Pattern p = Pattern.compile("/" + yearToExtract
-					+ "[0-9]{2}.mbox/");
 
 			if (str != null && !str.isEmpty() && !str.equalsIgnoreCase(""))
 
@@ -58,13 +60,12 @@ public class SaxHandler extends DefaultHandler {
 					if (m.find()) {
 						extractedUrls.add(str);
 					}
-
 				}
 
 				catch (Exception e) {
 					e.printStackTrace();
 				}
-
+			
 		}
 	}
 
