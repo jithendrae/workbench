@@ -64,9 +64,15 @@ public class LinksDownloader implements Runnable {
 
 									Future<MailObject> f = itr.next();
 
-									MailObject obj = f.get(100,	TimeUnit.SECONDS);
-
-									if (!(obj.from.equalsIgnoreCase("Exception"))) {
+									MailObject obj = null;
+									
+									try{
+									obj = f.get(100, TimeUnit.SECONDS);
+									}
+									catch(Exception e){
+										LOG.error(e.getLocalizedMessage());
+									}
+									if (!(obj.from.equalsIgnoreCase("Exception")) && obj!=null) {
 
 										newDownloadableLinks.remove(obj.mailId);
 										itr.remove();
@@ -96,9 +102,15 @@ public class LinksDownloader implements Runnable {
 
 									Future<MailObject> f = itr.next();
 
-									MailObject obj = f.get(100, TimeUnit.SECONDS);
-
-									if (!(obj.from.equalsIgnoreCase("Exception"))) {
+									MailObject obj = null;
+									try{
+									obj = f.get(100, TimeUnit.SECONDS);
+									}
+									catch(Exception e){
+										LOG.error(e.getLocalizedMessage());
+									}
+									
+									if (!(obj.from.equalsIgnoreCase("Exception")) && obj!= null) {
 
 										itr.remove();
 									}
@@ -183,7 +195,14 @@ public class LinksDownloader implements Runnable {
 			for (int i = 0; i < futs.size(); i++) {
 
 				Future<MailObject> f = futs.get(i);
-				MailObject ob = f.get(100, TimeUnit.SECONDS);
+				MailObject ob = null;
+				try{
+				ob = f.get(100, TimeUnit.SECONDS);
+				}
+				catch(Exception e){
+					e.printStackTrace();
+					System.out.println(ob);
+				}
 
 				if (!(ob.from.equalsIgnoreCase("Exception")))
 					newDownloadableLinks.remove(ob.mailId);

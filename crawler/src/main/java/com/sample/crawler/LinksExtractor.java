@@ -18,7 +18,7 @@ public class LinksExtractor extends Thread {
 	
 	private String url;
 	private String year;
-	private boolean parsingStatus = true;
+	private boolean moreLinksToDownload = true;
 
 	static ArrayList<String> downloadableLinks;
 	
@@ -64,23 +64,34 @@ public class LinksExtractor extends Thread {
                         
             LOG.info("Total mails to download for the year " + year + " are " + handler.extractedUrls.size() );
             
-			for (int i = 0; i < handler.extractedUrls.size(); i++) {
-				
-				downloadableLinks.add(handler.extractedUrls.get(i));
-				
-				if (downloadableLinks != null)
+            int i = 0;
+            
+            while(moreLinksToDownload){
+            	
+            	for (; i < handler.extractedUrls.size(); i++) {
+    				
+    				downloadableLinks.add(handler.extractedUrls.get(i));
+    				
+    				if (downloadableLinks != null)
 
-					synchronized (downloadableLinks) {
+    					synchronized (downloadableLinks) {
 
-						if (i % 1000 == 0 && i != 0)
-							downloadableLinks.wait();
-						
-						else if(handler.extractedUrls.size() -i -1 == 0)
-							downloadableLinks.wait();
-					}
-			}
-			
-			parsingStatus = false;
+    						if (i % 100 == 0 && i != 0)
+    							downloadableLinks.wait();
+    					}
+    			}
+    			
+				synchronized (downloadableLinks) {
+					
+					if(downloadableLinks.size()<1)
+		    			moreLinksToDownload = false;
+					
+					else
+						downloadableLinks.wait();
+
+				}
+            	
+            }			
 			
 		}
 
@@ -90,8 +101,8 @@ public class LinksExtractor extends Thread {
 
 	}
 
-	public boolean getLinksRemainingStatus() {
-		return parsingStatus;
+	public synchronized boolean getLinksRemainingStatus() {
+		return moreLinksToDownload;
 	}
 
 }
