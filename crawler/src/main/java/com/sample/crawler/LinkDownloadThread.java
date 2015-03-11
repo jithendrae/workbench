@@ -58,37 +58,38 @@ public class LinkDownloadThread implements Callable<MailObject> {
 	
 	@Override
 	public MailObject call() throws Exception {
-				
-		MailObject obj = null;
-
-		try {
-
-			String url = getUrl(mailbox_url);
-
-			Document doc = Jsoup.connect(url).get();
-			Elements ele = doc.getElementsByTag("table");
-
-			for (Element l : ele) {
-				if (l.id().equalsIgnoreCase("msgview"))
-					obj = parseMailAndSaveContents(l);
-			}
-
-			if (obj != null) {
-
-				String path = getSaveFileName(obj);
-				FileUtils.writeStringToFile(new File(path), obj.contents, "UTF-8");
-			}
-
-		} 
 		
-		catch (Exception e) 
-		{
-			LOG.debug("Exception saving mail for url " + mailbox_url);
-			return new MailObject("Exception", null, e.getMessage(), mailbox_url, null);
-		}
-			
-		LOG.debug("Finishing to save mail content for mail " + mailbox_url);
+		MailObject obj = new MailObject("Exception", null, null, mailbox_url, null);
+		
+			try {
 
+				String url = getUrl(mailbox_url);
+
+				Document doc = Jsoup.connect(url).get();
+				Elements ele = doc.getElementsByTag("table");
+
+				for (Element l : ele) {
+					if (l.id().equalsIgnoreCase("msgview"))
+						obj = parseMailAndSaveContents(l);
+				}
+
+				if (obj != null) {
+
+					String path = getSaveFileName(obj);
+					FileUtils.writeStringToFile(new File(path), obj.contents, "UTF-8");
+					
+					LOG.debug("Finishing to save mail content for mail " + mailbox_url);		
+
+				}
+
+			} 
+			
+			catch (Exception e) 
+			{
+				LOG.debug("Exception saving mail for url " + mailbox_url);
+				return new MailObject("Exception", null, e.getMessage(), mailbox_url, null);
+			}
+				
 		return obj;
 
 	}

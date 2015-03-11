@@ -76,7 +76,7 @@ public class LinksExtractor extends Thread {
 
     					synchronized (downloadableLinks) {
 
-    						if (i % 1000 == 0 && i != 0)
+    						if (i % 100 == 0 && i != 0)
     							downloadableLinks.wait();
     					}
     			}

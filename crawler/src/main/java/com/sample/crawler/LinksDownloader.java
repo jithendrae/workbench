@@ -31,7 +31,7 @@ public class LinksDownloader implements Runnable {
 	public LinksDownloader(LinksExtractor obj) {
 
 		this.linksExtractorRef = obj;
-		exec = Executors.newCachedThreadPool();
+		exec = Executors.newFixedThreadPool(1111);
 	}
 
 	public void run() {
@@ -69,11 +69,12 @@ public class LinksDownloader implements Runnable {
 									f = itr.next();
 									
 									try{
-										obj = f.get(200, TimeUnit.SECONDS);
+										obj = f.get(400, TimeUnit.SECONDS);
 										
 										if (!(obj.from.equalsIgnoreCase("Exception")) && obj!=null) {
 	
 											newDownloadableLinks.remove(obj.mailId);
+									
 											itr.remove();
 										}
 	
@@ -96,7 +97,7 @@ public class LinksDownloader implements Runnable {
 								runDownloads();
 							}
 
-							/*else if (runningDownloadLinks.size() > 0
+							else if (runningDownloadLinks.size() > 0
 									&& newDownloadableLinks.isEmpty()) {
 
 								Iterator<Future<MailObject>> itr = runningDownloadLinks.iterator();
@@ -110,7 +111,7 @@ public class LinksDownloader implements Runnable {
 									f = itr.next();
 									
 									try{
-										obj = f.get(200, TimeUnit.SECONDS);
+										obj = f.get(400, TimeUnit.SECONDS);
 										
 										if (!(obj.from.equalsIgnoreCase("Exception")) && obj!= null) {
 	
@@ -129,16 +130,17 @@ public class LinksDownloader implements Runnable {
 										}
 									}
 									catch(Exception e){
-										LOG.error(e.getLocalizedMessage());
-										//itr.remove();
-										//newDownloadableLinks.add(f)
+										
+										if(obj != null)
+											itr.remove();
+										newDownloadableLinks.add(obj.mailId);
 									}									
 
 								}
 
 								runDownloads();
 
-							}*/
+							}
 
 							else if (runningDownloadLinks.isEmpty()
 									&& !newDownloadableLinks.isEmpty()) {
@@ -208,7 +210,7 @@ public class LinksDownloader implements Runnable {
 				MailObject ob = null;
 				try{
 					ob = f.get(100, TimeUnit.SECONDS);
-					if (!(ob.from.equalsIgnoreCase("Exception")))
+					if (!(ob.from.equalsIgnoreCase("Exception")) && ob != null)
 						newDownloadableLinks.remove(ob.mailId);
 	
 					else {
@@ -218,8 +220,8 @@ public class LinksDownloader implements Runnable {
 					}
 				}
 				catch(Exception e){
-					LOG.error(e.getMessage());
-					itr.remove();
+					LOG.error("Exception fetching status of downloaded mail" + ob.mailId + "with " + e.getMessage());
+					runningDownloadLinks.add(f);
 				}			
 				
 			}
