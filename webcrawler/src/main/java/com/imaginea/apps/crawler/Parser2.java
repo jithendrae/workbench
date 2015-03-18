@@ -24,9 +24,9 @@ import com.imaginea.apps.crawler.util.LinkDownloadThread;
 public class Parser2 {
 	
 	@Autowired
-	DownloadsExecutorService exec;
+	private DownloadsExecutorService exec;
 	
-	WebClient client = new WebClient(BrowserVersion.CHROME);
+	private WebClient client = new WebClient(BrowserVersion.CHROME);
 	
 	static final Logger LOG = LoggerFactory.getLogger(LinkDownloadThread.class);
 
@@ -53,13 +53,13 @@ public class Parser2 {
 				while(next) {				
 					
 					try 
-					{					
-						HtmlAnchor a = p.getAnchorByText("Next »");
-						p = (HtmlPage)a.click();
-						
-						List list = extractLinksForPage(p);
-						
+					{			
+						List list = extractLinksForPage(p);						
+						links.addAll(list);						
 						exec.addDownloadLinks(mailbox, list);
+						
+						HtmlAnchor a = p.getAnchorByText("Next »");
+						p = (HtmlPage)a.click();						
 						
 						LOG.info("Total mail links for page --- are " + list.size());
 

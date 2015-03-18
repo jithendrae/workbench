@@ -24,7 +24,7 @@ public class LinkDownloadThread implements Callable<Boolean> {
 	private String mailId;
 	
 	@Autowired
-	CommitManager manager;
+	private CommitManager manager;
 
 	static final Logger LOG = LoggerFactory.getLogger(LinkDownloadThread.class);
 	
@@ -43,8 +43,14 @@ public class LinkDownloadThread implements Callable<Boolean> {
 	
 	@Override
 	public Boolean call() throws Exception {	
-
-		String url = getUrl(mailbox_url);
+		
+		String url = mailbox_url;;
+		
+		if(!manager.isResumed())
+			url = getUrl(mailbox_url);
+		else
+			mailId = getMailId(url);	
+		
 
 		/*WebClient webClient = new WebClient();
 	    XmlPage page = webClient.getPage(url);
@@ -72,6 +78,7 @@ public class LinkDownloadThread implements Callable<Boolean> {
 		
 		catch (Exception e) 
 		{
+			e.printStackTrace();
 			LOG.debug("Download for mail "+ mailId + " has failed");
 			manager.updateFailureQueue(url);
 			return false;					
@@ -79,6 +86,12 @@ public class LinkDownloadThread implements Callable<Boolean> {
 		}
 	}
 	
+	private String getMailId(String url) {
+
+		int decode_index = url.lastIndexOf("/");		
+		return mailId = "%3C"+url.substring(decode_index+2,mailbox_url.length()-1)+"%3E";		
+	}
+
 	public String getSaveFileName(String subject){
 		
 		String fileName = subject.replaceAll("[^a-zA-Z0-9.-_][.]$", "");		

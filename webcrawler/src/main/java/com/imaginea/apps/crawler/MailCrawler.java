@@ -46,10 +46,10 @@ public class MailCrawler implements Crawler{
 	private Downloader downloader;	
 	
 	@Autowired
-	DownloadsExecutorService exec;
+	private DownloadsExecutorService exec;
 	
 	@Autowired
-	CommitManager manager;
+	private CommitManager manager;
 	
 	private ArrayList<String> links = new ArrayList<>();
 	private String url;
@@ -61,13 +61,14 @@ public class MailCrawler implements Crawler{
 	static final Logger LOG = LoggerFactory.getLogger(LinkDownloadThread.class);
 
 	public void crawl() {
+
+		exec.setExecutorProfile();
 		
 		if(manager.canResume()){
 			manager.doResume();
 		}
 		
 		else{
-			exec.setExecutorProfile();
 			links = parse(url,year);
 			//download(links);
 		}	
@@ -76,6 +77,7 @@ public class MailCrawler implements Crawler{
 		
 		if(manager.canResume()){			
 			manager.serialize();
+			exec.shutdownExecutor();
 		}	
 		
 

@@ -1,14 +1,19 @@
 package com.imaginea.apps.crawler.util;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -34,22 +39,24 @@ public class CommitManager implements Serializable{
 	private static final long serialVersionUID = 1L;
 
 	@Autowired
-	MailCrawler crawler;
+	private MailCrawler crawler;
 	
 	@Autowired
-	Parser2 parser;
+	private Parser2 parser;
 	
 	@Autowired
-	DownloadsExecutorService exec;
+	private DownloadsExecutorService exec;
 	
 	private ConcurrentLinkedQueue<String> failedLinks = new ConcurrentLinkedQueue<>();
 	private ConcurrentLinkedQueue<String> succeededLinks = new ConcurrentLinkedQueue<>();
 	
-	private HashMap<String,Boolean> applicationPipeline = new HashMap<>();
+	private LinkedHashMap<String,Boolean> applicationPipeline = new LinkedHashMap<>();
 	private HashMap<String,Boolean> monthsLinksMap = new HashMap<>();
 	private ArrayList<String> downloadLinkslist = new ArrayList<>();
 	
-	boolean canResume = false;
+	private boolean canResume = false;
+
+	private boolean retried = false;
 	
 	static final Logger LOG = LoggerFactory.getLogger(LinkDownloadThread.class);
 
@@ -97,10 +104,15 @@ public class CommitManager implements Serializable{
 	public void setUpStep2(String monthLink, ArrayList<String> list) {
 
 		monthsLinksMap.put(monthLink, true);
-		downloadLinkslist.addAll(list);
+		
+		if(!retried)
+			downloadLinkslist.addAll(list);
 	}
 	
 	public void doResume(){
+		
+		canResume = false;
+		retried = true;
 		
 		LOG.info("Resuming app from previous state");
 		
@@ -109,10 +121,11 @@ public class CommitManager implements Serializable{
 		while(itr.hasNext()){
 			Entry<String, Boolean> entry = itr.next();
 			if(entry.getValue() == false){
-				if(entry.getKey() == "setArgs"){
+				if(entry.getKey().equalsIgnoreCase("setArgs")){
 					rerun();
+					break;
 				}				
-				else if(entry.getKey() == "crawl"){
+				else if(entry.getKey().equalsIgnoreCase("crawl")){
 					
 					for(Entry e:entrySet){
 						if(e.getKey().equals("parse") && e.getValue().equals(true)){
@@ -122,23 +135,13 @@ public class CommitManager implements Serializable{
 							for(Entry e1:entrySet){
 								if(e1.getKey().equals("Step1") && e1.getValue().equals(true)){
 									for(Entry e2:entrySet){
-										if(e2.getKey().equals("Step2") && e2.getValue().equals(true)){
-											for(Entry e3:entrySet){
-												if(e3.getKey().equals("finalize") && e3.getValue().equals(true)){
-													canResume=false;
-													break;													
-												}
-												else
-													initiateStep2();break;
+										if(e2.getKey().equals("Step2")){											
+													initiateStep2();
+													break;
 											}
 										}
-										else{
-											initiateStep2();
-											break;
-										}
-									}										
-								}
-								else{
+									}								
+								else if(e1.getKey().equals("Step1") && e1.getValue().equals(false)){
 									rerun();
 									break;
 								}
@@ -147,21 +150,26 @@ public class CommitManager implements Serializable{
 					}
 				}
 				
-				else if(entry.getKey() == "finalize"){
+				else if(entry.getKey().equalsIgnoreCase("Step2")){
+					initiateStep2();
+					break;
+				}
+				
+				else if(entry.getKey().equalsIgnoreCase("finalize")){
 					initiateFinalize();
 					break;
 				}
 			}
-			else{
+			/*else{
 				canResume = false;
 				break;
-			}
+			}*/
 		}
 	}
 	
 	public boolean canResume(){
 		
-		if(canResume)
+		if(canResume && !retried )
 			return true;
 		else
 			return false;
@@ -193,13 +201,27 @@ public class CommitManager implements Serializable{
 	
 	public void initiateFinalize(){
 		
-		canResume = true;
+		//canResume = true;
 		
-		while(succeededLinks.size() == downloadLinkslist.size() && failedLinks.size()<1){
+		while(succeededLinks.size() != downloadLinkslist.size() && failedLinks.size()>1){
+			
 			ArrayList<String> list = new ArrayList<String>(failedLinks);
 			exec.addDownloadLinks(list);
+			failedLinks.clear();
 		}
+		
 		canResume = false;
+		LOG.error("resume failed, restart the app again...");
+		
+		//canResume = false;
+		File file = new File(".");
+		File[] fileList = file.listFiles();
+		for (File f : fileList) {
+		    if (f.getName().endsWith(".ser")) {
+		        f.delete(); // may fail mysteriously - returns boolean you may want to check
+		    }
+		}
+		
 		
 	}
 
@@ -217,6 +239,7 @@ public class CommitManager implements Serializable{
 			ObjectOutputStream out=new ObjectOutputStream(mSer); 			  
 			out.writeObject(failedLinks);  
 			out.flush();
+			out.close();
 		} 
 		catch (IOException e) 
 		{
@@ -229,6 +252,7 @@ public class CommitManager implements Serializable{
 			ObjectOutputStream out=new ObjectOutputStream(mSer); 			  
 			out.writeObject(succeededLinks);  
 			out.flush();
+			out.close();
 		} 
 		catch (IOException e) 
 		{
@@ -241,6 +265,7 @@ public class CommitManager implements Serializable{
 			ObjectOutputStream out=new ObjectOutputStream(mSer); 			  
 			out.writeObject(applicationPipeline);  
 			out.flush();
+			out.close();
 		} 
 		catch (IOException e) 
 		{
@@ -253,6 +278,7 @@ public class CommitManager implements Serializable{
 			ObjectOutputStream out=new ObjectOutputStream(mSer); 			  
 			out.writeObject(monthsLinksMap);  
 			out.flush();
+			out.close();
 		} 
 		catch (IOException e) 
 		{
@@ -265,6 +291,7 @@ public class CommitManager implements Serializable{
 			ObjectOutputStream out=new ObjectOutputStream(mSer); 			  
 			out.writeObject(downloadLinkslist);  
 			out.flush();
+			out.close();
 		} 
 		catch (IOException e) 
 		{
@@ -277,6 +304,7 @@ public class CommitManager implements Serializable{
 			ObjectOutputStream out=new ObjectOutputStream(mSer); 			  
 			out.writeObject(canResume);  
 			out.flush();
+			out.close();
 		} 
 		catch (IOException e) 
 		{
@@ -290,12 +318,16 @@ public class CommitManager implements Serializable{
 		try 
 		{
 			FileInputStream mSer = new FileInputStream("downloadLinkslist.ser");
-			ObjectInputStream in=new ObjectInputStream(mSer); 			  
-			downloadLinkslist = (ArrayList<String>) in.readObject();  
+			ObjectInputStream in=new ObjectInputStream(mSer);
+			
+				ArrayList list = (ArrayList<String>) in.readObject();
+				downloadLinkslist = list;
+			
 			in.close();
 		} 
 		catch (IOException | ClassNotFoundException e) 
 		{
+			e.printStackTrace();
 			LOG.error("downloadLinkslist could not be read");
 		}  
 		
@@ -315,7 +347,7 @@ public class CommitManager implements Serializable{
 		{
 			FileInputStream mSer = new FileInputStream("applicationPipeline.ser");
 			ObjectInputStream in=new ObjectInputStream(mSer); 			  
-			applicationPipeline = (HashMap<String, Boolean>) in.readObject();  
+			applicationPipeline = (LinkedHashMap<String, Boolean>) in.readObject();  
 			in.close();
 		} 
 		catch (IOException | ClassNotFoundException e) 
@@ -358,8 +390,12 @@ public class CommitManager implements Serializable{
 		catch (IOException | ClassNotFoundException e) 
 		{
 			LOG.error("failedLinks could not be read");
-		}  		
+		}
 	
+	}
+
+	public boolean isResumed() {
+		return retried;
 	}
 	
 }

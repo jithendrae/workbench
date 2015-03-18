@@ -17,12 +17,12 @@ import com.imaginea.apps.crawler.MailCrawler;
 public class SavePointCommitInterceptor {
 	
 	@Autowired
-	CommitManager manager;
+	private CommitManager manager;
 	
 	static final Logger LOG = LoggerFactory.getLogger(LinkDownloadThread.class);
 	
 	@Autowired
-	MailCrawler crawler;
+	private MailCrawler crawler;
 	
 	@AfterReturning(
 		      pointcut = "execution(* com.imaginea.apps.crawler.MailCrawler.setArgs(..))", returning="result")

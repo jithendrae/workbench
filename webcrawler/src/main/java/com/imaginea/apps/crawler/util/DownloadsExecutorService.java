@@ -4,6 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Future;
+import java.util.concurrent.RejectedExecutionHandler;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
@@ -15,12 +18,13 @@ import com.gargoylesoftware.htmlunit.html.DomAttr;
 @Component("DownloadsExecutorService")
 public class DownloadsExecutorService {
 
-	ThreadPoolTaskExecutor exec;
+	private ThreadPoolTaskExecutor exec;
+
 	
 	@Autowired
-	ApplicationContext ctx;	
+	private ApplicationContext ctx;	
 	
-	ConcurrentLinkedQueue<Future> futs = new ConcurrentLinkedQueue<>();
+	private ConcurrentLinkedQueue<Future> futs = new ConcurrentLinkedQueue<>();
 
 	public void setExecutorProfile(){
 		exec = new ThreadPoolTaskExecutor();
@@ -29,6 +33,7 @@ public class DownloadsExecutorService {
 		exec.setCorePoolSize(200);
 		exec.setMaxPoolSize(200);
 		exec.initialize();
+		exec.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
 	}
 	
 	public void addDownloadLinks(String link){
@@ -55,7 +60,16 @@ public class DownloadsExecutorService {
 	
 	public void shutdownExecutor(){
 		
-		exec.setWaitForTasksToCompleteOnShutdown(true);
+		try
+		{
+			exec.setWaitForTasksToCompleteOnShutdown(false);
+			exec.getThreadPoolExecutor().awaitTermination(10, TimeUnit.SECONDS);	
+			exec.shutdown();
+		} 
+		catch (IllegalStateException | InterruptedException e) 
+		{
+			e.printStackTrace();
+		}
 	}
 
 
