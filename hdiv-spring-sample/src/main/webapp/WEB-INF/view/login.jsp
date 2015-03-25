@@ -8,7 +8,7 @@
 </head>
 <body>
 
-	<form:form method="get" action="showMessage" modelAttribute="command">
+	<form:form method="post" action="showMessage" modelAttribute="command">
 	<p> Click submit to test form submission with Hdiv integration</p>
 		      <input type="submit" value="Submit" />  
 	</form:form>	

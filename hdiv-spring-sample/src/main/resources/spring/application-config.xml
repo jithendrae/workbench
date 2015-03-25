@@ -10,5 +10,7 @@
     <hdiv:config>
 		<hdiv:startPages>/</hdiv:startPages>
 	</hdiv:config>	
+	
+	    <context:component-scan  base-package="org.hdiv.web.hateoas"/>	
 
 </beans>

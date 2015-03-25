@@ -11,9 +11,9 @@
     
     <mvc:view-controller path="/" view-name="index"/>
 
- 	<bean id="editableValidator" class="org.hdiv.web.validator.EditableParameterValidator"/>
+ 	<bean id="editableValidator" class="org.hdiv.web.validator.EditableParameterValidator"/> 	
  
-	<mvc:annotation-driven validator = "editableValidator"/>		
+	<mvc:annotation-driven validator = "editableValidator"/>			
 	
 	<bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
 	
