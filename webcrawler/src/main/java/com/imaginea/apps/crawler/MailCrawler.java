@@ -1,14 +1,9 @@
 package com.imaginea.apps.crawler;
 
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.ObjectOutputStream;
 import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Set;
-
+import java.util.List;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -31,80 +26,57 @@ import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.joran.JoranConfigurator;
 import ch.qos.logback.core.joran.spi.JoranException;
 
-import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import com.imaginea.apps.crawler.util.CommitManager;
-import com.imaginea.apps.crawler.util.DownloadsExecutorService;
 import com.imaginea.apps.crawler.util.LinkDownloadThread;
+
+/*
+ * MailCrawler is the implementation of the application interface. 
+ * It implements the service layer methods of the application and 
+ * is therefore the service class that include the application's workflow
+ */
 
 @Component("MailCrawler")
 public class MailCrawler implements Crawler{
 	
 	@Autowired
-	private Parser2 parser;
-	
-	@Autowired 
-	private Downloader downloader;	
-	
-	@Autowired
-	private DownloadsExecutorService exec;
+	private Parser parser;	
 	
 	@Autowired
 	private CommitManager manager;
 	
-	private ArrayList<String> links = new ArrayList<>();
 	private String url;
 	private String year = "2014";
-	
-	private Set<String> linksCompleted = new HashSet<>();
-	private Set<String> linksFailed = new HashSet<>();
 	
 	static final Logger LOG = LoggerFactory.getLogger(LinkDownloadThread.class);
 
 	public void crawl() {
-
-		exec.setExecutorProfile();
+		
+		manager.setExecutorProfile();
+		ArrayList list = new ArrayList();
 		
 		if(manager.canResume()){
 			manager.doResume();
 		}
 		
 		else{
-			links = parse(url,year);
-			//download(links);
+			list = parse(url,year);
 		}	
 		
-		manager.setResumeStatus();
-		
-		if(manager.canResume()){			
-			manager.serialize();
-			exec.shutdownExecutor();
-		}	
-		
-
+		manager.shutdownExecutor();
 	}
 
-	/*private void download(ArrayList<String> links) {
-		
-		downloader.download(links);
-		
-		boolean linksRemaining = true;
-		
-		while(linksRemaining){
-			
-			if(links.size()==linksCompleted.size() && linksFailed.size()<1){
-				linksRemaining = false;
-			}else{
-				downloader.download(new ArrayList<>(linksFailed));
-			}
-		}
-	}*/
-
-	private ArrayList<String> parse(String url, String year) {
+	private ArrayList parse(String url, String year) {
 
 		ArrayList<String> pageList = parser.extractMonthsForYear(url,year);
-		ArrayList<String> linksList = new ArrayList<>();
+		ArrayList linksList = new ArrayList();
 		for(String monthLink:pageList) {
-			linksList.addAll(parser.extractLinksForMonth(monthLink));
+			try 
+			{
+				linksList.addAll(parser.extractLinksForMonth(monthLink));
+			} 
+			catch (Throwable e) {
+				e.printStackTrace();
+			}
 		}
 		
 		return linksList;
@@ -119,19 +91,6 @@ public class MailCrawler implements Crawler{
 			setApplicationLogConfiguration(logLevel);
 	}
 
-	public synchronized void updateLinksSuccessful(String key) {
-		
-		LOG.info("updated link success");
-
-		linksCompleted.add(key);
-	}
-	
-	public synchronized void updateLinksFailed(String key) {
-		
-		LOG.info("updated link failure");
-
-		linksFailed.add(key);
-	}
 	
 	private void setApplicationLogConfiguration(String logLevel){
 			
@@ -169,6 +128,30 @@ public class MailCrawler implements Crawler{
 		{
 			LOG.warn("Exception setting Log level \n" + e.getLocalizedMessage() + " LOG level set to default: INFO");
 		}
+	}
+	
+	public void resume_crawl(List<String> downloadResumeLinks){
+		
+		ArrayList list = resume_parse(downloadResumeLinks);
+		
+	}
+	
+	public ArrayList resume_parse(List<String> downloadResumableLinks){
+		
+		ArrayList linksList = new ArrayList();
+		
+		for(String monthLink:downloadResumableLinks)
+			
+			try 
+			{
+				linksList.addAll(parser.extractLinksForMonth(monthLink));
+			} 
+			catch (Throwable e) 
+			{
+				e.printStackTrace();
+			}
+		
+		return linksList;
 	}
 
 }

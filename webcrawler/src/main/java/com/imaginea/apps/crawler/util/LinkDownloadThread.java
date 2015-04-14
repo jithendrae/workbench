@@ -14,76 +14,86 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
-
+/*
+ * This class configures the threads created by Worker 
+ * and returns the status of each thread to the executor which 
+ * then updates the CommitManager of the thread's success
+ * in downloading the mails by implementing the Callable interface
+ */
 
 @Component("LinkDownloadThread")
 @Scope("prototype")
 public class LinkDownloadThread implements Callable<Boolean> {
-
-	private String mailbox_url;
-	private String mailId;
+	
 	
 	@Autowired
 	private CommitManager manager;
 
+	private String mailbox_url;
+	private String mailId;
+	private String linkStatus;
+	
 	static final Logger LOG = LoggerFactory.getLogger(LinkDownloadThread.class);
 	
 	public void setDownloadUrl(String url) {
+		
 		mailbox_url = url;
+		
+		LOG.info("The mail download link is "+url);
 	}
 
 	public String getUrl(String mailbox_url){
 		
-		int decode_index = mailbox_url.lastIndexOf("/");
-		String url_first = mailbox_url.substring(0, decode_index + 1);
-		String url_last = "<" + mailbox_url.substring(decode_index + 4,	mailbox_url.length() - 3) + ">";
-		mailId = mailbox_url.substring(decode_index+1,mailbox_url.length());
-		return  url_first + url_last;
+		if(linkStatus.equalsIgnoreCase("new")){
+			
+			int decode_index = mailbox_url.lastIndexOf("/");
+			String url_first = mailbox_url.substring(0, decode_index + 1);
+			String url_last = "<" + mailbox_url.substring(decode_index + 4,	mailbox_url.length() - 3) + ">";
+			mailId = mailbox_url.substring(decode_index+1,mailbox_url.length());
+			return  url_first + url_last;
+		}
+		
+		else{
+			int decode_index = mailbox_url.lastIndexOf("/");
+			mailId = "%3C"+mailbox_url.substring(decode_index+2,mailbox_url.length()-1)+"%3E";
+			return mailbox_url;
+
+		}		
+
 	}	
 	
 	@Override
 	public Boolean call() throws Exception {	
 		
-		String url = mailbox_url;;
-		
-		if(!manager.isResumed())
-			url = getUrl(mailbox_url);
-		else
-			mailId = getMailId(url);	
-		
-
-		/*WebClient webClient = new WebClient();
-	    XmlPage page = webClient.getPage(url);
-	    
-	    String fileName = getSaveFileName(((DomElement)page.getFirstByXPath("//subject")).asText());
-	    Date date = getDateString(((DomElement)page.getFirstByXPath("//date")).asText());
-	    
-	    String filePath = "E://mails//"
-				+ new SimpleDateFormat("yyyy").format(date) + "//"
-				+ theMonth(date.getMonth()) + "//" + fileName
-				+ "__"
-				+ new SimpleDateFormat("dd_HHmm").format(date)
-				+ ".xml";
-*/
-		try 
-		{
-			File f = new File("E://mails//" + mailId);
-			//File f = new File(filePath);
-			FileUtils.copyURLToFile(new URL(url), f);
+		boolean status = false;	
 			
-			LOG.debug("Download for mail "+ mailId + " is successful");
-			manager.updateSuccessQueue(url);
-			return true;
-		} 
-		
-		catch (Exception e) 
-		{
-			e.printStackTrace();
-			LOG.debug("Download for mail "+ mailId + " has failed");
-			manager.updateFailureQueue(url);
-			return false;					
+			String url = mailbox_url;
+			
+				url = getUrl(mailbox_url);
+				
+				try 
+				{
+					File f = new File("E://mails//" + mailId);
+					//File f = new File(filePath);
+					FileUtils.copyURLToFile(new URL(url), f);
+					
+					LOG.debug("Download for mail "+ mailId + " is successful");
+					manager.updateSuccessQueue(url);
+					status = true;
+				} 
+				
+				catch (Exception e) 
+				{
+					e.printStackTrace();
+					LOG.debug("Download for mail "+ mailId + " has failed");
+					manager.updateFailureQueue(url);
+					status = false;					
 
-		}
+				}		
+		
+		return status;
+		
+		
 	}
 	
 	private String getMailId(String url) {
@@ -127,6 +137,11 @@ public class LinkDownloadThread implements Callable<Boolean> {
 				"June", "July", "August", "September", "October", "November",
 				"December" };
 		return monthNames[month];
+	}
+
+	public void setLinkStatus(String status) {
+
+		linkStatus = status;
 	}
 
 

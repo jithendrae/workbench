@@ -7,13 +7,11 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -23,26 +21,28 @@ import javax.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.wiring.BeanConfigurerSupport;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 import com.imaginea.apps.crawler.MailCrawler;
-import com.imaginea.apps.crawler.Parser2;
+import com.imaginea.apps.crawler.Parser;
+
+/*
+ * This is the Application level manager that monitors the application's
+ * status, restoration functionality and save point for the application
+ * which helps in resuming the application 
+ */
 
 @Component
 public class CommitManager implements Serializable{
 	
-	/**
-	 * 
-	 */
 	private static final long serialVersionUID = 1L;
 
 	@Autowired
 	private MailCrawler crawler;
 	
 	@Autowired
-	private Parser2 parser;
+	private Parser parser;
 	
 	@Autowired
 	private DownloadsExecutorService exec;
@@ -52,12 +52,9 @@ public class CommitManager implements Serializable{
 	
 	private LinkedHashMap<String,Boolean> applicationPipeline = new LinkedHashMap<>();
 	private HashMap<String,Boolean> monthsLinksMap = new HashMap<>();
-	private ArrayList<String> downloadLinkslist = new ArrayList<>();
 	
 	private boolean canResume = false;
 
-	private boolean retried = false;
-	
 	static final Logger LOG = LoggerFactory.getLogger(LinkDownloadThread.class);
 
 	@Async
@@ -101,19 +98,15 @@ public class CommitManager implements Serializable{
 			monthsLinksMap.put(s, false);
 	}
 
-	public void setUpStep2(String monthLink, ArrayList<String> list) {
-
-		monthsLinksMap.put(monthLink, true);
+	public void setUpStep2(String monthLink, ArrayList<String> list, Boolean stepResult) {
 		
-		if(!retried)
-			downloadLinkslist.addAll(list);
+			monthsLinksMap.put(monthLink, stepResult);
 	}
 	
 	public void doResume(){
 		
 		canResume = false;
-		retried = true;
-		
+	
 		LOG.info("Resuming app from previous state");
 		
 		Set<Entry<String, Boolean>> entrySet = applicationPipeline.entrySet();
@@ -127,14 +120,14 @@ public class CommitManager implements Serializable{
 				}				
 				else if(entry.getKey().equalsIgnoreCase("crawl")){
 					
-					for(Entry e:entrySet){
+					for(Entry<?, ?> e:entrySet){
 						if(e.getKey().equals("parse") && e.getValue().equals(true)){
 							initiateFinalize();break;
 						}
 						else if(e.getKey().equals("parse") && e.getValue().equals(false)){
-							for(Entry e1:entrySet){
+							for(Entry<?, ?> e1:entrySet){
 								if(e1.getKey().equals("Step1") && e1.getValue().equals(true)){
-									for(Entry e2:entrySet){
+									for(Entry<?, ?> e2:entrySet){
 										if(e2.getKey().equals("Step2")){											
 													initiateStep2();
 													break;
@@ -151,7 +144,7 @@ public class CommitManager implements Serializable{
 				}
 				
 				else if(entry.getKey().equalsIgnoreCase("Step2")){
-					initiateStep2();
+					rerun();
 					break;
 				}
 				
@@ -160,23 +153,42 @@ public class CommitManager implements Serializable{
 					break;
 				}
 			}
-			/*else{
-				canResume = false;
-				break;
-			}*/
+			
+			else if(entry.getValue() == true){
+				if(entry.getKey().equalsIgnoreCase("Step2")){
+					initiateStep2();
+					break;
+				}
+			}
 		}
 	}
 	
 	public boolean canResume(){
 		
-		if(canResume && !retried )
+		if(canResume){
+
+			retryFailedLinks();
 			return true;
+
+		}
 		else
+		{
+			setWorkflowStatus("finalize", true);
 			return false;
+		}
 	}
 	
+	private void retryFailedLinks() {
+		
+		ArrayList<String> list = new ArrayList<String>(failedLinks);
+		failedLinks.clear();
+		exec.addDownloadLinks(list);
+		setWorkflowStatus("finalize", true);
+	}
+
 	public void rerun(){
-		crawler.setArgs("http://mail-archives.apache.org/mod_mbox/maven-users/","2014",null);
+		canResume = false;
+		crawler.setArgs("http://mail-archives.apache.org/mod_mbox/ws-sandesha-dev/","2007",null);
 		crawler.crawl();
 	}
 	
@@ -186,14 +198,18 @@ public class CommitManager implements Serializable{
 		
 		Iterator<Entry<String, Boolean>> itr = monthsLinksMap.entrySet().iterator();
 		
+		List<String> downloadResumableLinks = new ArrayList<>();
+		
 		while(itr.hasNext()){
 			
-			Entry<String, Boolean> e = itr.next();
-			
+			Entry<String, Boolean> e = itr.next();			
 			if(e.getValue().equals(false)){
-				parser.extractLinksForMonth(e.getKey());
+				downloadResumableLinks.add(e.getKey());
 			}
 		}
+		
+		if(downloadResumableLinks.size()>0)
+			crawler.resume_crawl(downloadResumableLinks);
 		
 		initiateFinalize();
 		
@@ -201,19 +217,9 @@ public class CommitManager implements Serializable{
 	
 	public void initiateFinalize(){
 		
-		//canResume = true;
-		
-		while(succeededLinks.size() != downloadLinkslist.size() && failedLinks.size()>1){
-			
-			ArrayList<String> list = new ArrayList<String>(failedLinks);
-			exec.addDownloadLinks(list);
-			failedLinks.clear();
-		}
 		
 		canResume = false;
-		LOG.error("resume failed, restart the app again...");
 		
-		//canResume = false;
 		File file = new File(".");
 		File[] fileList = file.listFiles();
 		for (File f : fileList) {
@@ -222,16 +228,53 @@ public class CommitManager implements Serializable{
 		    }
 		}
 		
+		if(failedLinks.size()>0){
+
+			canResume = true;
+			//serialize();
+			setWorkflowStatus("finalize", false);
+		}
+
+		
+		boolean status = exec.shutdownExecutor();		
+		
+		if(status == true | status == false)
+			serialize();
 		
 	}
 
 	public void setResumeStatus() {
 
-		if(succeededLinks.size() != downloadLinkslist.size() && failedLinks.size()>1)
+		//if(succeededLinks.size() != downloadLinkslist.size() && failedLinks.size()>1){
+		if(failedLinks.size()<1){
+
+			Iterator<Entry<String, Boolean>> itr = applicationPipeline.entrySet().iterator();
+			
+			while(itr.hasNext()){
+				
+				Entry e = (Entry) itr.next();
+				if(!e.getKey().equals("finalize")){
+					e.getValue().equals("false");
+					canResume = true;
+					serialize();
+					break;
+				}
+				else{
+					canResume = false;
+					serialize();
+				}
+			}
+				
+		}
+		
+		else
+		{
 			canResume = true;
+			serialize();
+		}
 	}
 	
-	public void serialize(){		
+	public void serialize(){
 		
 		try 
 		{
@@ -287,19 +330,6 @@ public class CommitManager implements Serializable{
 		
 		try 
 		{
-			FileOutputStream mSer = new FileOutputStream("downloadLinkslist.ser");
-			ObjectOutputStream out=new ObjectOutputStream(mSer); 			  
-			out.writeObject(downloadLinkslist);  
-			out.flush();
-			out.close();
-		} 
-		catch (IOException e) 
-		{
-			LOG.error(downloadLinkslist.size() + " object could not be saved");
-		}  
-		
-		try 
-		{
 			FileOutputStream mSer = new FileOutputStream("canResume.ser");
 			ObjectOutputStream out=new ObjectOutputStream(mSer); 			  
 			out.writeObject(canResume);  
@@ -313,23 +343,8 @@ public class CommitManager implements Serializable{
 	}
 	
 	@PostConstruct
+	@SuppressWarnings("unchecked")
 	public void initializeManager(){
-		
-		try 
-		{
-			FileInputStream mSer = new FileInputStream("downloadLinkslist.ser");
-			ObjectInputStream in=new ObjectInputStream(mSer);
-			
-				ArrayList list = (ArrayList<String>) in.readObject();
-				downloadLinkslist = list;
-			
-			in.close();
-		} 
-		catch (IOException | ClassNotFoundException e) 
-		{
-			e.printStackTrace();
-			LOG.error("downloadLinkslist could not be read");
-		}  
 		
 		try 
 		{
@@ -394,8 +409,20 @@ public class CommitManager implements Serializable{
 	
 	}
 
-	public boolean isResumed() {
-		return retried;
+
+
+	public void setExecutorProfile() {
+
+		exec.setExecutorProfile();
+	}
+
+	public void shutdownExecutor() {
+		
+		boolean status = exec.shutdownExecutor();
+		
+		if(status == true | status == false)
+		
+			setResumeStatus();		
 	}
 	
 }

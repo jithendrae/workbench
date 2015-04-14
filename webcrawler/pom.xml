@@ -89,6 +89,11 @@
 			<artifactId>aspectjweaver</artifactId>
 			<version>1.8.5</version>
 		</dependency>
+		<dependency>
+			<groupId>com.github.junitrunner</groupId>
+			<artifactId>junitrunner-spring</artifactId>
+			<version>0.0.2</version>
+		</dependency>
 	</dependencies>	
 	<build>
 		<plugins>

@@ -10,6 +10,11 @@ import org.springframework.context.annotation.Scope;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
+/*
+ * The DownloadWorker is the worker class for the DownloadsExecutorService that 
+ * creates the worker threads which will be used for downloading the mails 
+ */
+
 @Component("DownloadWorker")
 @Scope("prototype")
 
