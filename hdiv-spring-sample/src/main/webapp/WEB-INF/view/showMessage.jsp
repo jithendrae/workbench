@@ -1,13 +1,6 @@
-
-<%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
-<!DOCTYPE html>
-    
-<html>
-	<head>
-		<meta charset="utf-8">
-		<title>Welcome</title>
-	</head> 
+<% response.setHeader("X-XSS-Protection", "0"); %>    
+<html> 
 	<body>
-		<h2>${message}</h2>
+		${message}
 	</body>
 </html>

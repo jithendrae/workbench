@@ -6,20 +6,29 @@
 		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
 		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
 		http://www.hdiv.org/schema/hdiv http://www.hdiv.org/schema/hdiv/hdiv.xsd">
+		
+			
+			<mvc:default-servlet-handler/>
+		
 
     <context:component-scan  base-package="com.hdivSample.Controller"/>
+    
+    <!-- malicious execution filter added from app_-config.xml as editableValidations -->
+    			<mvc:annotation-driven validator="hdivEditableValidator" />
+    
     
     <mvc:view-controller path="/" view-name="index"/>
 
  	<bean id="editableValidator" class="org.hdiv.web.validator.EditableParameterValidator"/> 	
- 
-	<mvc:annotation-driven validator = "editableValidator"/>			
-	
+
+			  
 	<bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
 	
 	        <!-- Example: a logical view name of 'showMessage' is mapped to '/WEB-INF/jsp/showMessage.jsp' -->
 	        <property name="prefix" value="/WEB-INF/view/"/>
 	        <property name="suffix" value=".jsp"/>
 	</bean>
+	
+
 
 </beans>

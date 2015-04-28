@@ -6,11 +6,30 @@
 		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
 		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
 		http://www.hdiv.org/schema/hdiv http://www.hdiv.org/schema/hdiv/hdiv.xsd">	
-            
-    <hdiv:config>
-		<hdiv:startPages>/</hdiv:startPages>
-	</hdiv:config>	
+         
+         		<mvc:annotation-driven />	
+         
+         
+        <hdiv:config errorPage="error.jsp" showErrorPageOnEditableValidation="true" >
+		<hdiv:startPages>/,index.jsp</hdiv:startPages>
+	</hdiv:config>	  
 	
-	    <context:component-scan  base-package="org.hdiv.web.hateoas"/>	
+	
+	
+<hdiv:validation id="hdivEditable" componentType="text">
+     <hdiv:acceptedPattern><![CDATA[^[a-zA-Z0-9@.-_]*$]]></hdiv:acceptedPattern>
+      <!--  <hdiv:rejectedPattern><![CDATA[^(?:(?!or|OR).)*$\r?\n?]]></hdiv:rejectedPattern>
+    
+    <hdiv:rejectedPattern><![CDATA[(\s|\S)*()(\s|\S)*]]></hdiv:rejectedPattern>-->
+ </hdiv:validation>
+	
+   <hdiv:editableValidations registerDefaults="false">
+	<hdiv:validationRule url=".*" enableDefaults="false">hdivEditable</hdiv:validationRule>
+</hdiv:editableValidations>
+         
+
+            
+
+	
 
 </beans>

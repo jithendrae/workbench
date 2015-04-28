@@ -6,6 +6,10 @@
 
     <display-name>hdiv-spring-sample</display-name>
     
+    <welcome-file-list>
+    <welcome-file/>
+</welcome-file-list>
+    
    <!--
 		- Location of the XML file that defines the root application context.
 		- Applied by ContextLoaderListener.
@@ -44,12 +48,15 @@
 		<listener-class>org.hdiv.listener.InitListener</listener-class>
 	</listener>
 	<filter>
-		<filter-name>ValidatorFilter</filter-name>
+		<filter-name>hdivValidatorFilter</filter-name>
 		<filter-class>org.hdiv.filter.ValidatorFilter</filter-class>
 	</filter>
+
 	<filter-mapping>
-		<filter-name>ValidatorFilter</filter-name>
+		<filter-name>hdivValidatorFilter</filter-name>
 		<servlet-name>dispatcherServlet</servlet-name>
 	</filter-mapping>
+	
+	<!--  tests run requires debug changes at some places -->
 
 </web-app>
