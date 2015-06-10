@@ -25,7 +25,6 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-
 /*
  * Restaurant Application that accepts command line input of Restaurant and Menu Listing file
  * and the Menu order Details in the format filename[space]item1[space]item2... 
@@ -34,257 +33,268 @@ import java.util.stream.IntStream;
 
 public class RestaurantApp {
 
-	static HashMap<Integer, List<MyEntry<String, Float>>> restructureMap = new HashMap<>();
 	static List<String> menu_order_items = new ArrayList<>();
-	static ConcurrentHashMap<Integer, List<Float>> RestaurantMenuTable = new ConcurrentHashMap<>();
-	
-	// Run: >java -cp e:\restaurantApp RestaurantApp sample_data.csv burger tofu_log
+	static HashMap<Integer, List<MenuEntry<String, Float>>> restructureMap = new HashMap<>();
+	static ConcurrentHashMap<Integer, Float> RestaurantMenuTable = new ConcurrentHashMap<>();
+
+	// In Windows Run: >java -cp e:\restaurantApp RestaurantApp sample_data.csv burger tofu_log
 
 	public static void main(String[] args) throws IOException {
-		
-		try{
+
+		try {
 			String csvFile = args[0];
 
 			for (int i = 1; i < args.length; i++)
-				menu_order_items.add(args[i]);			
+				menu_order_items.add(args[i]);
 
 			InputStream is = new FileInputStream(new File(csvFile));
 			BufferedReader br = new BufferedReader(new InputStreamReader(is));
 
 			Predicate<String> p1 = (p) -> (menu_order_items.stream().anyMatch(keyword -> p.matches(".*\\b" + keyword + "\\b.*")));
-			
-			br.lines().parallel().filter(p1).forEach(firstPass);
-			Set<Entry<Integer, List<MyEntry<String, Float>>>> menuEntries = restructureMap.entrySet();
-			menuEntries.stream().parallel().forEach(secondPass);
-			
-			br.close();
-			
-			//RestaurantMenuTable contains all restaurants that can serve the order in various of their menu combinations for which
-			//their corresponding prices are saved thereof
 
-			//System.out.println(RestaurantMenuTable);
-			
-			try{
-				Integer restId = null;
-		
-				Float minPrice = Collections.min(RestaurantMenuTable.values().stream()
-						.flatMap(c -> c.stream()).collect(Collectors.toList()));
-				
-				Set<Entry<Integer, List<Float>>> restaurantListings = RestaurantMenuTable.entrySet();
-				Iterator<Entry<Integer, List<Float>>> restaurantListIterator = restaurantListings.iterator();
-				
-				// Finding the minimum price and corresponding restaurant id to display to user
-				
-				while (restaurantListIterator.hasNext()) {
-					Entry<Integer, List<Float>> e = restaurantListIterator.next();
-					if (e.getValue().contains(minPrice))
-						restId = e.getKey();
+			br.lines().parallel().filter(p1).forEach(firstPass);
+			Set<Entry<Integer, List<MenuEntry<String, Float>>>> menuEntries = restructureMap.entrySet();
+			menuEntries.stream().parallel().forEach(secondPass);
+
+			br.close();
+
+			// RestaurantMenuTable contains all restaurants that can serve the
+			// order in various of their menu combinations for which
+			// their corresponding prices are saved thereof
+
+			try {
+				Entry<Integer, Float> restaurant = null;
+				for (Entry<Integer, Float> entry : RestaurantMenuTable.entrySet()) {
+					if (restaurant == null || restaurant.getValue() > entry.getValue()) {
+						restaurant = entry;
+					}
 				}
-		
-				System.out.println(restId + " " + minPrice);
-			}
-			catch(Exception e){
+
+				System.out.println(restaurant.getKey() + " " + restaurant.getValue());
+
+			} catch (Exception e) {
 				System.out.println("Nil");
 			}
-			
-		}
-		catch(Exception e){
+
+		} catch (Exception e) {
 			System.out.println("Enter proper input arguments");
 		}
-		
+
+	}
+
+	public static int[] removeElement(int[] a, int del) {
+		System.arraycopy(a, del + 1, a, del, a.length - 1 - del);
+		return a;
 	}
 
 	/*
-	 * Here we are restructuring the data from csv into a map in the following format
-	 * upon removing those restaurants whose menu does not contain user request
-	 * Format: map_entry: [rest_id, <Menu1,Value1>, <Menu2,Value2>]
-	 * here, Menu is each `line` from csv file and Value is the corresponding Price
-	 * Each entry corresponds to a unique restaurant accordingly
+	 * Here we are restructuring the data from csv into a map in the following
+	 * format upon removing those restaurants whose menu does not contain user
+	 * request Format: map_entry: [rest_id, <Menu1,Value1>, <Menu2,Value2>, ...]
+	 * here, Menu is each `line` from csv file and Value is the corresponding
+	 * Price Each entry corresponds to a unique restaurant accordingly
 	 */
 
 	public static Consumer<? super String> firstPass = (line) -> {
 
-		String[] p = line.split(",");
-
-		
 		List<String> lineItems = new ArrayList<>(Arrays.asList(line.split(",")));
 		List<String> menuList = lineItems.subList(2, lineItems.size());
 		String menuString = String.join(",", menuList);
-		// System.out.println(lineItems.get(0));
-		
-		List<MyEntry<String, Float>> itemsList = restructureMap.get(Integer.parseInt(lineItems.get(0)));
 
-		if (itemsList == null) {
-			itemsList = new ArrayList<>();
-			itemsList.add(new MyEntry<String, Float>(menuString, Float.parseFloat(p[1])));
-			restructureMap.put(Integer.parseInt(p[0]), itemsList);
+		try {
+			List<MenuEntry<String, Float>> itemsList = restructureMap.get(Integer.parseInt(lineItems.get(0)));
+
+			if (itemsList == null) {
+				itemsList = new ArrayList<>();
+				itemsList.add(new MenuEntry<String, Float>(menuString, Float.parseFloat(lineItems.get(1))));
+				restructureMap.put(Integer.parseInt(lineItems.get(0)), itemsList);
+			}
+
+			else {
+				if (!itemsList.contains(new MenuEntry<String, Float>(menuString, Float.parseFloat(lineItems.get(1)))))
+					itemsList.add(new MenuEntry<String, Float>(menuString, Float.parseFloat(lineItems.get(1))));
+			}
 		}
 
-		else {
-			itemsList.add(new MyEntry<String, Float>(menuString, Float.parseFloat(p[1])));
-		}
-		
-		// System.out.println(restructureMap);
+		catch (Exception e) {
 
+		}
 	};
 
 	/*
-    * Here, the restructured data is consumed one entry at a time where it is scanned
-    * to retrieve the MenuItems from the Menus available in each entry.
-    * We may get here a single menu that may cater to all requested items or
-    * a group(distributed) menus that collectively may serve the user requests
-    * or perhaps no single restaurant may contain such menu collection that can serve
-    * the purpose in which case the result is empty
-    *  	
-    */
+	 * Here, the restructured data is consumed one entry at a time where it is
+	 * scanned to retrieve the MenuItems from the Menus available in each entry.
+	 * We may get here a single menu that may cater to all requested items or a
+	 * group(distributed) menus that collectively may serve the user requests or
+	 * perhaps no single restaurant may contain such menu collection that can
+	 * serve the purpose in which case the result is empty
+	 */
 
-	public static Consumer<Entry<Integer, List<MyEntry<String, Float>>>> secondPass = (element) -> {
+	public static Consumer<Entry<Integer, List<MenuEntry<String, Float>>>> secondPass = (element) -> {
 
 		ArrayList<Float> pricePerSelectedMenusCombination = new ArrayList<>();
+		List<MenuEntry<String, Float>> menuList = element.getValue();
 
-		List<MyEntry<String, Float>> menuList = element.getValue();
-		
-		//This corresponds to the storage of menu distribution that collectively serve the user 
-		CopyOnWriteArrayList<int[]> indexList = new CopyOnWriteArrayList<>();	
+		// This corresponds to the storage of menu distribution that
+		// collectively serve the user
+		CopyOnWriteArrayList<int[]> indexList = new CopyOnWriteArrayList<>();
 		List<List<Integer>> newIndexList = new ArrayList<>();
 
 		for (String keyword : menu_order_items) {
 			int[] indices = IntStream.range(0, menuList.size())
 					.filter(i -> menuList.get(i).getKey().contains(keyword))
 					.toArray();
-			if(indices.length>0)
-			indexList.add(indices);
+			if (indices.length > 0)
+				indexList.add(indices);
 		}
 
 		int menuDistribution = indexList.size();
+		int singleMenuCatersAllUserItems;
 
 		if (menuDistribution == menu_order_items.size()) {
 			{
-				//System.out.println("menu: Single and distributed Menus are added to MenuTable");
+				// System.out.println("menu: Single and distributed Menus are added to MenuTable");
 				HashMap<Integer, Integer> menuDistro = new HashMap<>();
 
-				// here we are reducing the menu distribution by separating those menus that can independently serve 
-				//all the items requested
-				
-				int[] temp = indexList.get(0);
-				int singleMenuCatersAllUserItems;
-				
-				//Identification of such Menus
+				// here we are reducing the menu distribution by separating
+				// those menus that can independently serve
+				// all the items requested
 
-				if (menuDistribution > 1) {
+				int[] temp = indexList.get(0);
+
+				// Identification of such Menus
+
+				for (int y = 1; y < indexList.size(); y++) {
+					int[] intermediateArray = indexList.get(y);
 
 					for (int x = 0; x < temp.length; x++) {
 						int count = 0;
 
-						for (int y = 1; y < indexList.size(); y++) {
-							int[] intermediateArray = indexList.get(y);
+						for (int z = 0; z < intermediateArray.length; z++) {
 
-							for (int z = 0; z < intermediateArray.length; z++) {
-								if (temp[x] == intermediateArray[z])
-									menuDistro.put(temp[x], ++count);
-							}
+							if (temp[x] == intermediateArray[z])
+								menuDistro.put(temp[x], ++count);
 						}
 					}
-					
-					//Separation of such menus
-
-					Set<Integer> s = new HashSet<Integer>();
-					if (menuDistro.containsValue(menuDistribution - 1)) {
-						s = getKeysByValue(menuDistro, menuDistribution - 1);
-					}
-
-					
-					//Reduction of menus thereby if single menu found
-					
-					if (s.size() > 0) {
-
-						Iterator<Integer> itr = s.iterator();
-
-						while (itr.hasNext()) {
-							singleMenuCatersAllUserItems = itr.next();
-							ListIterator<int[]> listItr = indexList
-									.listIterator();
-
-							while (listItr.hasNext()) {
-								List<Integer> l = new ArrayList<>();
-
-								int[] itrArray = listItr.next();
-
-								for (int j = 0; j < itrArray.length; j++) {
-									if (singleMenuCatersAllUserItems != itrArray[j])
-										l.add(itrArray[j]);
-								}
-								newIndexList.add(l);
-
-							}
-
-							pricePerSelectedMenusCombination.add(element.getValue().get(singleMenuCatersAllUserItems).getValue());
-							
-							RestaurantMenuTable.put(element.getKey(), pricePerSelectedMenusCombination);
-						}
-					}
-
-					// No one single menu is sufficient to serve the request, hence reading all the collective menus
-					else {
-						newIndexList = convert(indexList);
-					}					
-					
 				}
-				
-				else if(menuDistribution == 1){
+
+				// Separation of such menus
+
+				Set<Integer> setOfIndividualMenus = new HashSet<Integer>();
+				if (menuDistro.containsValue(menuDistribution - 1)) {
+					setOfIndividualMenus = getKeysByValue(menuDistro,
+							menuDistribution - 1);
+				}
+
+				// Reduction of menus thereby if single menu found
+
+				if (setOfIndividualMenus.size() > 0) {
+
+					ListIterator<int[]> listItr = indexList.listIterator();
+
+					while (listItr.hasNext()) {
+						int[] interList = listItr.next();
+						for (int a = 0; a < interList.length; a++) {
+							int itrValue = interList[a];
+
+							Iterator<Integer> itr = setOfIndividualMenus.iterator();
+
+							while (itr.hasNext()) {
+								singleMenuCatersAllUserItems = itr.next();
+								if (itrValue == singleMenuCatersAllUserItems) {
+									interList = removeElement(interList, itrValue);
+
+									if (!pricePerSelectedMenusCombination
+											.contains(element
+													.getValue()
+													.get(singleMenuCatersAllUserItems)
+													.getValue()))
+										pricePerSelectedMenusCombination
+												.add(element
+														.getValue()
+														.get(singleMenuCatersAllUserItems)
+														.getValue());
+									break;
+								}
+							}
+
+						}
+
+						ArrayList<Integer> intArray = new ArrayList<>();
+						for (int i = 0; i < interList.length; i++) {
+							intArray.add(interList[i]);
+						}
+
+						newIndexList.add(intArray);
+					}
+
+					if (RestaurantMenuTable.contains(element.getKey()))
+						RestaurantMenuTable.put(element.getKey(), Math.min(Collections.min(pricePerSelectedMenusCombination), RestaurantMenuTable.get(element.getKey())));
+
+					else
+						RestaurantMenuTable.put(element.getKey(), Collections.min(pricePerSelectedMenusCombination));
+
+				}
+
+				else {
 					newIndexList = convert(indexList);
 				}
-				
-				// Reading all possible menu distributions from the obtained menu ids
-				
+
 				List<List<Integer>> menuDistroSets = newIndexList;
 
 				List<List<Integer>> cartesianProducts = cartesianProduct(menuDistroSets);
-								
-				// Removing duplicate menu id entries while calculating the collective price in serving the order distributed across menus
 
-				List<List<Integer>> noDuplicatesInProducts = cartesianProducts.stream().map(product -> product.stream().distinct()
+				// Removing duplicate menu id entries while calculating the
+				// collective price in serving the order distributed across menus
+
+				List<List<Integer>> noDuplicatesInProducts = cartesianProducts
+						.stream()
+						.map(product -> product.stream().distinct()
 								.collect(Collectors.toList()))
 						.collect(Collectors.toList());
 
-				// System.out.println(noDuplicatesInProducts);
-				
 				// Establishing the total price per order for restaurant
 
 				for (List<Integer> index : noDuplicatesInProducts) {
-
 					List<Integer> indexDetailsForMenu = index;
 					float totalPrice = 0;
 					for (int indice : indexDetailsForMenu) {
-
 						totalPrice = totalPrice	+ element.getValue().get(indice).getValue();
 					}
-					pricePerSelectedMenusCombination.add(totalPrice);
-					RestaurantMenuTable.put(element.getKey(), pricePerSelectedMenusCombination);
+					if (!pricePerSelectedMenusCombination.contains(totalPrice))
+						pricePerSelectedMenusCombination.add(totalPrice);
+
+					// System.out.println(pricePerSelectedMenusCombination);
 				}
-				
+				if (RestaurantMenuTable.contains(element.getKey())) {
+					RestaurantMenuTable.put(element.getKey(), Math.min(Collections.min(pricePerSelectedMenusCombination), RestaurantMenuTable.get(element.getKey())));
+				}
+
+				else
+					RestaurantMenuTable.put(element.getKey(), Collections.min(pricePerSelectedMenusCombination));
 			}
 		}
 	};
-	
+
 	public static <T> List<List<T>> cartesianProduct(List<List<T>> lists) {
-	    List<List<T>> resultLists = new ArrayList<List<T>>();
-	    if (lists.size() == 0) {
-	        resultLists.add(new ArrayList<T>());
-	        return resultLists;
-	    } else {
-	        List<T> firstList = lists.get(0);
-	        List<List<T>> remainingLists = cartesianProduct(lists.subList(1, lists.size()));
-	        for (T condition : firstList) {
-	            for (List<T> remainingList : remainingLists) {
-	                ArrayList<T> resultList = new ArrayList<T>();
-	                resultList.add(condition);
-	                resultList.addAll(remainingList);
-	                resultLists.add(resultList);
-	            }
-	        }
-	    }
-	    return resultLists;
+		List<List<T>> resultLists = new ArrayList<List<T>>();
+		if (lists.size() == 0) {
+			resultLists.add(new ArrayList<T>());
+			return resultLists;
+		} else {
+			List<T> firstList = lists.get(0);
+			List<List<T>> remainingLists = cartesianProduct(lists.subList(1,
+					lists.size()));
+			for (T condition : firstList) {
+				for (List<T> remainingList : remainingLists) {
+					ArrayList<T> resultList = new ArrayList<T>();
+					resultList.add(condition);
+					resultList.addAll(remainingList);
+					resultLists.add(resultList);
+				}
+			}
+		}
+		return resultLists;
 	}
 
 	public static <T, E> Set<T> getKeysByValue(Map<T, E> map, E value) {
@@ -300,31 +310,4 @@ public class RestaurantApp {
 						.collect(Collectors.toList()))
 				.collect(Collectors.toList());
 	}
-}
-
-final class MyEntry<K, V> implements Map.Entry<K, V> {
-    private final K key;
-    private V value;
-
-    public MyEntry(K key, V value) {
-        this.key = key;
-        this.value = value;
-    }
-
-    @Override
-    public K getKey() {
-        return key;
-    }
-
-    @Override
-    public V getValue() {
-        return value;
-    }
-
-    @Override
-    public V setValue(V value) {
-        V old = this.value;
-        this.value = value;
-        return old;
-    }
 }
