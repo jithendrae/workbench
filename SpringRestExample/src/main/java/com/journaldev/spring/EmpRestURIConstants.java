@@ -1,5 +1,8 @@
-package com.journaldev.spring.controller;
+package com.journaldev.spring;
 
+import org.springframework.stereotype.Component;
+
+@Component
 public class EmpRestURIConstants {
 
 	public static final String DUMMY_EMP = "/rest/emp/dummy";

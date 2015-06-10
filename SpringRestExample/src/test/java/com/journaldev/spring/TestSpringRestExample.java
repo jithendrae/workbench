@@ -5,8 +5,7 @@ import java.util.List;
 
 import org.springframework.web.client.RestTemplate;
 
-import com.journaldev.spring.controller.EmpRestURIConstants;
-import com.journaldev.spring.model.Employee;
+import com.journaldev.spring.EmpRestURIConstants;
 
 public class TestSpringRestExample {
 
