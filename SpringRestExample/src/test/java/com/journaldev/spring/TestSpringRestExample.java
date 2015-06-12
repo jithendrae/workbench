@@ -9,7 +9,7 @@ import com.journaldev.spring.EmpRestURIConstants;
 
 public class TestSpringRestExample {
 
-	public static final String SERVER_URI = "http://localhost:9090/SpringRestExample";
+	public static final String SERVER_URI = "http://localhost:8080/SpringRestExample";
 	
 	public static void main(String args[]){
 		

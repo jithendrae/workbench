@@ -3,6 +3,8 @@ package com.journaldev.spring;
 import java.io.Serializable;
 import java.util.Date;
 
+import javax.validation.constraints.NotNull;
+
 import org.springframework.context.annotation.Configuration;
 import org.springframework.stereotype.Component;
 
@@ -27,7 +29,7 @@ public class Employee implements Serializable{
 		return id;
 	}
 	
-	public void setId(int id) {
+	public void setId(@NotNull int id) {
 		this.id = id;
 	}
 	
@@ -36,7 +38,7 @@ public class Employee implements Serializable{
 		return name;
 	}
 	
-	public void setName(String name) {
+	public void setName(@NotNull String name) {
 		this.name = name;
 	}
 	
